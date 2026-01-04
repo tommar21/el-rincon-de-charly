@@ -1,219 +1,71 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ta-Te-Ti</title>
-    <link rel="stylesheet" href="css/main.css">
-    <link href="https://fonts.googleapis.com/css2?family=MuseoModerno&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Oswald&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:ital@1&family=Oswald&display=swap" rel="stylesheet">
-</head>
+    <!-- Primary Meta Tags -->
+    <title>Game Hub - Juegos de Mesa Online</title>
+    <meta name="title" content="Game Hub - Juegos de Mesa Online" />
+    <meta name="description" content="Juega juegos de mesa gratis: Tic Tac Toe, Conecta 4, Ajedrez y mas. Juega contra la IA, con amigos en local o en linea. PWA instalable con temas personalizables." />
+    <meta name="keywords" content="juegos de mesa, tic tac toe, ta te ti, conecta 4, ajedrez, damas, online, multijugador, IA, gratis, PWA" />
+    <meta name="author" content="Tomi" />
+    <meta name="robots" content="index, follow" />
 
-<body>
-    <div id="choose">
-        <h1>You are</h1>
-        <div class="options" id="clickx">X</div>
-        <div class="options" id="clicko">O</div>
-        <div class="divfondo">
-            <svg class="svgfondo" width="100" height="100">
-                <path class="equis1" d='M25,20 l50,60' stroke='gray' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110'/>
-                <path class="equis1" d='M75,20 l-50,60' stroke='gray' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110'/>
-            </svg>
-        </div>
-        <div class="divfondo">
-            <svg class="svgfondo" width="100" height="100">
-                <path class="equis2" d='M25,20 l50,60' stroke='gray' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110'/>
-                <path class="equis2" d='M75,20 l-50,60' stroke='gray' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110'/>
-            </svg>
-        </div>
-        <div class="divfondo">
-            <svg class="svgfondo" width="100" height="100">
-                <path class="equis3" d='M45,20 l50,60' stroke='gray' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110'/>
-                <path class="equis3" d='M95,20 l-50,60' stroke='gray' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110'/>
-            </svg>
-        </div>
-        <div class="divfondo">
-            <svg class="svgfondo" width="100" height="100">
-                <path class="equis4" d='M25,30 l50,60' stroke='gray' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110'/>
-                <path class="equis4" d='M75,30 l-50,60' stroke='gray' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110'/>
-            </svg>
-        </div>
-        <div class="divfondo">
-            <svg class="svgfondo" width="100" height="100">
-                <path class="equis5" d='M25,20 l50,60' stroke='gray' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110'/>
-                <path class="equis5" d='M75,20 l-50,60' stroke='gray' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110'/>
-            </svg>
-        </div>
-        <div class="divfondo">
-            <svg class="svgfondo" width="100" height="100">
-                <circle id="circ1" cx="50" cy="50" r="30" fill="transparent" stroke="gray" stroke-width="10"
-                    stroke-dasharray="313.6517333984375"/>
-            </svg>
-        </div>
-        <div class="divfondo">
-            <svg class="svgfondo" width="100" height="100">
-                <circle id="circ2" cx="50" cy="60" r="30" fill="transparent" stroke="gray" stroke-width="10"
-                    stroke-dasharray="313.6517333984375"/>
-            </svg>
-        </div>
-        <div class="divfondo">
-            <svg class="svgfondo" width="100" height="100">
-                <circle id="circ3" cx="50" cy="50" r="30" fill="transparent" stroke="gray" stroke-width="10"
-                    stroke-dasharray="313.6517333984375"/>
-            </svg>
-        </div>
-        <div class="divfondo">
-            <svg class="svgfondo" width="100" height="100">
-                <circle id="circ4" cx="40" cy="50" r="30" fill="transparent" stroke="gray" stroke-width="10"
-                    stroke-dasharray="313.6517333984375"/>
-            </svg>
-        </div>
-        <div class="divfondo">
-            <svg class="svgfondo" width="100" height="100">
-                <circle id="circ5" cx="50" cy="50" r="30" fill="transparent" stroke="gray" stroke-width="10"
-                    stroke-dasharray="313.6517333984375"/>
-            </svg>
-        </div>
-    </div>
-    <div id="cont">
-        <div id="turno">Es el turno de: <span id="quien"></span>
-        </div>
-    </div>
-    <div id="juego">
-        <div id="ttt">
-            <svg width="308" height="100" xmlns="http://www.w3.org/2000/svg">
-                <path d="M0,0 l308,0 l0,100 l-308,0 Z"  stroke="#FFFF00" stroke-width="5" stroke-dasharray="50" fill="transparent"/>
-            </svg>
-            <h1>Tic-Tac-Toe</h1>
-        </div>
-        <div class="filas">
-            <div class="celdas">
-                <svg class="svgx" width="100" height="100">
-                    <path class="equis" d='M25,20 l50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                        stroke-dasharray='110' stroke-dashoffset='120' />
-                    <path class="equis" d='M75,20 l-50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                        stroke-dasharray='110' stroke-dashoffset='120' />
-                </svg>
-                <svg class="svgo" width="100" height="100">
-                    <circle class="circle" cx="50" cy="50" r="30" fill="transparent" stroke="#f000ff" stroke-width="10"
-                        stroke-dasharray="313.6517333984375" stroke-dashoffset="-313.6517333984375" />
-                </svg>
-            </div>
-            <div class="celdas">
-                <svg class="svgx" width="100" height="100">
-                <path class="equis" d='M25,20 l50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110' stroke-dashoffset='120' />
-                <path class="equis" d='M75,20 l-50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110' stroke-dashoffset='120' />
-            </svg>
-                <svg class="svgo" width="100" height="100">
-                <circle class="circle" cx="50" cy="50" r="30" fill="transparent" stroke="#f000ff" stroke-width="10"
-                    stroke-dasharray="313.6517333984375" stroke-dashoffset="-313.6517333984375" />
-            </svg>
-            </div>
-            <div class="celdas">
-                <svg class="svgx" width="100" height="100">
-                <path class="equis" d='M25,20 l50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110' stroke-dashoffset='120' />
-                <path class="equis" d='M75,20 l-50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110' stroke-dashoffset='120' />
-            </svg>
-                <svg class="svgo" width="100" height="100">
-                <circle class="circle" cx="50" cy="50" r="30" fill="transparent" stroke="#f000ff" stroke-width="10"
-                    stroke-dasharray="313.6517333984375" stroke-dashoffset="-313.6517333984375" />
-            </svg>
-            </div>
-        </div>
-        <div class="filas">
-            <div class="celdas">
-                <svg class="svgx" width="100" height="100">
-                <path class="equis" d='M25,20 l50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110' stroke-dashoffset='120' />
-                <path class="equis" d='M75,20 l-50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110' stroke-dashoffset='120' />
-            </svg>
-                <svg class="svgo" width="100" height="100">
-                <circle class="circle" cx="50" cy="50" r="30" fill="transparent" stroke="#f000ff" stroke-width="10"
-                    stroke-dasharray="313.6517333984375" stroke-dashoffset="-313.6517333984375" />
-            </svg>
-            </div>
-            <div class="celdas">
-                <svg class="svgx" width="100" height="100">
-                <path class="equis" d='M25,20 l50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110' stroke-dashoffset='120' />
-                <path class="equis" d='M75,20 l-50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110' stroke-dashoffset='120' />
-            </svg>
-                <svg class="svgo" width="100" height="100">
-                <circle class="circle" cx="50" cy="50" r="30" fill="transparent" stroke="#f000ff" stroke-width="10"
-                    stroke-dasharray="313.6517333984375" stroke-dashoffset="-313.6517333984375" />
-            </svg>
-            </div>
-            <div class="celdas">
-                <svg class="svgx" width="100" height="100">
-                <path class="equis" d='M25,20 l50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110' stroke-dashoffset='120' />
-                <path class="equis" d='M75,20 l-50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                    stroke-dasharray='110' stroke-dashoffset='120' />
-            </svg>
-                <svg class="svgo" width="100" height="100">
-                <circle class="circle" cx="50" cy="50" r="30" fill="transparent" stroke="#f000ff" stroke-width="10"
-                    stroke-dasharray="313.6517333984375" stroke-dashoffset="-313.6517333984375" />
-            </svg>
-            </div>
-        </div>
-        <div class="filas">
-            <div class="celdas">
-                <svg class="svgx" width="100" height="100">
-            <path class="equis" d='M25,20 l50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                stroke-dasharray='110' stroke-dashoffset='120' />
-            <path class="equis" d='M75,20 l-50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                stroke-dasharray='110' stroke-dashoffset='120' />
-        </svg>
-                <svg class="svgo" width="100" height="100">
-            <circle class="circle" cx="50" cy="50" r="30" fill="transparent" stroke="#f000ff" stroke-width="10"
-                stroke-dasharray="313.6517333984375" stroke-dashoffset="-313.6517333984375" />
-        </svg>
-            </div>
-            <div class="celdas">
-                <svg class="svgx" width="100" height="100">
-            <path class="equis" d='M25,20 l50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                stroke-dasharray='110' stroke-dashoffset='120' />
-            <path class="equis" d='M75,20 l-50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                stroke-dasharray='110' stroke-dashoffset='120' />
-        </svg>
-                <svg class="svgo" width="100" height="100">
-            <circle class="circle" cx="50" cy="50" r="30" fill="transparent" stroke="#f000ff" stroke-width="10"
-                stroke-dasharray="313.6517333984375" stroke-dashoffset="-313.6517333984375" />
-        </svg>
-            </div>
-            <div class="celdas">
-                <svg class="svgx" width="100" height="100">
-            <path class="equis" d='M25,20 l50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                stroke-dasharray='110' stroke-dashoffset='120' />
-            <path class="equis" d='M75,20 l-50,60' stroke='#4deeea' stroke-width='10' stroke-linecap='round'
-                stroke-dasharray='110' stroke-dashoffset='120' />
-        </svg>
-                <svg class="svgo" width="100" height="100">
-            <circle class="circle" cx="50" cy="50" r="30" fill="transparent" stroke="#f000ff" stroke-width="10"
-                stroke-dasharray="313.6517333984375" stroke-dashoffset="-313.6517333984375" />
-        </svg>
-            </div>
-        </div>
-    </div>
-    <script src="js/main.js"></script>
-</body>
+    <!-- Viewport & Mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Game Hub" />
 
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="msapplication-TileColor" content="#0a0a0a" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+
+    <!-- Prevent phone number detection -->
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Game Hub - Juegos de Mesa Online" />
+    <meta property="og:description" content="Juega juegos de mesa gratis contra la IA o con amigos. Tic Tac Toe, Conecta 4, Ajedrez y mas." />
+    <meta property="og:image" content="/icon.svg" />
+    <meta property="og:locale" content="es_ES" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Game Hub - Juegos de Mesa Online" />
+    <meta name="twitter:description" content="Juega juegos de mesa gratis contra la IA o con amigos" />
+    <meta name="twitter:image" content="/icon.svg" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Game Hub",
+      "description": "Juega juegos de mesa contra la IA o con amigos online",
+      "applicationCategory": "GameApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "100"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

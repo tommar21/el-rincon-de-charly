@@ -1,0 +1,131 @@
+/* Google Fonts - must be first */
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&family=MuseoModerno:wght@400;600;700&family=Oswald:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables for theming */
+:root {
+  /* Neon theme (default) */
+  --color-primary: #4deeea;
+  --color-secondary: #f000ff;
+  --color-accent: #FFFF00;
+  --color-background: #0a0a0a;
+  --color-surface: #1a1a1a;
+  --color-text: #ffffff;
+  --color-text-muted: #a0a0a0;
+
+  /* Shadows */
+  --shadow-neon-cyan: 0 0 10px #4deeea, 0 0 20px #4deeea40;
+  --shadow-neon-magenta: 0 0 10px #f000ff, 0 0 20px #f000ff40;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  --color-primary: #60a5fa;
+  --color-secondary: #a78bfa;
+  --color-accent: #fbbf24;
+  --color-background: #111827;
+  --color-surface: #1f2937;
+  --color-text: #f9fafb;
+  --color-text-muted: #9ca3af;
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --color-primary: #0891b2;
+  --color-secondary: #7c3aed;
+  --color-accent: #d97706;
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Josefin Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text);
+    min-height: 100vh;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@layer components {
+  /* Button styles */
+  .btn {
+    @apply px-4 py-2 rounded-lg font-semibold transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply bg-[var(--color-primary)] text-black;
+    @apply hover:brightness-110;
+    @apply focus:ring-[var(--color-primary)];
+  }
+
+  .btn-secondary {
+    @apply bg-[var(--color-secondary)] text-white;
+    @apply hover:brightness-110;
+    @apply focus:ring-[var(--color-secondary)];
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-[var(--color-text)];
+    @apply hover:bg-[var(--color-surface)];
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-[var(--color-surface)] rounded-xl p-6;
+    @apply shadow-lg;
+  }
+
+  /* Neon glow effects */
+  .glow-cyan {
+    filter: drop-shadow(0 0 8px var(--color-primary));
+  }
+
+  .glow-magenta {
+    filter: drop-shadow(0 0 8px var(--color-secondary));
+  }
+}
+
+@layer utilities {
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  }
+
+  /* Animated background */
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 3s ease infinite;
+  }
+
+  @keyframes gradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+}
