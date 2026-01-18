@@ -80,6 +80,7 @@ export function useAuth() {
       password,
       options: {
         data: { username },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
