@@ -95,10 +95,16 @@ class GameRoomService {
       .eq('status', 'waiting')
       .is('player2_id', null)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error joining room:', error);
+      return null;
+    }
+
+    // Si no hay data, la sala ya fue ocupada por otro jugador
+    if (!data) {
+      console.log('Room already taken or not available');
       return null;
     }
 
