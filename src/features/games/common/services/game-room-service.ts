@@ -28,7 +28,8 @@ export interface GameRoomWithPlayers extends GameRoom {
 }
 
 class GameRoomService {
-  private channel: RealtimeChannel | null = null;
+  // Map de canales por roomId para evitar que múltiples jugadores se sobrescriban
+  private channels: Map<string, RealtimeChannel> = new Map();
 
   private get supabase() {
     return getClient();
@@ -257,8 +258,18 @@ class GameRoomService {
 
   // Suscribirse a cambios en una sala
   subscribeToRoom(roomId: string, callback: (room: GameRoom) => void): () => void {
-    this.channel = this.supabase
-      .channel(`room:${roomId}`)
+    // Crear un ID único para esta suscripción (permite múltiples jugadores en la misma sala)
+    const subscriptionId = `${roomId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+
+    // Si ya hay una suscripción activa para este subscriptionId, limpiarla primero
+    const existingChannel = this.channels.get(subscriptionId);
+    if (existingChannel) {
+      this.supabase.removeChannel(existingChannel);
+      this.channels.delete(subscriptionId);
+    }
+
+    const channel = this.supabase
+      .channel(`room:${subscriptionId}`) // Nombre único por suscripción
       .on(
         'postgres_changes',
         {
@@ -275,10 +286,13 @@ class GameRoomService {
       )
       .subscribe();
 
+    this.channels.set(subscriptionId, channel);
+
     return () => {
-      if (this.channel) {
-        this.supabase.removeChannel(this.channel);
-        this.channel = null;
+      const ch = this.channels.get(subscriptionId);
+      if (ch) {
+        this.supabase.removeChannel(ch);
+        this.channels.delete(subscriptionId);
       }
     };
   }

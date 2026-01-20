@@ -23,6 +23,8 @@ export function useAuth() {
 
   // Track if initial session load is complete to prevent race condition
   const initialLoadCompleteRef = useRef(false);
+  // Track if we're in the middle of a session refresh (prevents false SIGNED_OUT)
+  const isRefreshingSessionRef = useRef(false);
   // Track current profile fetch to prevent stale data
   const currentProfileFetchRef = useRef<string | null>(null);
 
@@ -163,8 +165,14 @@ export function useAuth() {
         if (!mounted) return;
 
         // Skip if initial load hasn't completed yet (avoid race condition)
-        // Exception: SIGNED_OUT should always be handled
         if (!initialLoadCompleteRef.current && event !== 'SIGNED_OUT') {
+          return;
+        }
+
+        // Ignore SIGNED_OUT if we're in the middle of a session refresh
+        // This prevents false logouts during token refresh when opening shared links
+        if (event === 'SIGNED_OUT' && isRefreshingSessionRef.current) {
+          console.log('[Auth] Ignoring SIGNED_OUT during session refresh');
           return;
         }
 
@@ -193,8 +201,14 @@ export function useAuth() {
     // Then do initial session check
     const initSession = async () => {
       try {
+        // Mark that we're refreshing session to prevent false SIGNED_OUT events
+        isRefreshingSessionRef.current = true;
+
         // getUser() makes a network request and refreshes the token if expired
         const { data: { user: authUser }, error: userError } = await supabase.auth.getUser();
+
+        // Session refresh complete
+        isRefreshingSessionRef.current = false;
 
         if (!mounted) return;
 
