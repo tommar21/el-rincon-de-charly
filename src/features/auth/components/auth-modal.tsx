@@ -18,11 +18,13 @@ import { cn } from '@/lib/utils/cn';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Optional message to show above the form (e.g., for shared game links) */
+  message?: string;
 }
 
 type AuthMode = 'login' | 'register';
 
-export function AuthModal({ isOpen, onClose }: AuthModalProps) {
+export function AuthModal({ isOpen, onClose, message }: AuthModalProps) {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -146,6 +148,15 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </ModalHeader>
 
             <ModalBody>
+              {/* Custom message (e.g., for shared game links) */}
+              {message && (
+                <div className="mb-6 p-4 rounded-xl bg-(--color-primary)/10 border border-(--color-primary)/30">
+                  <p className="text-sm text-(--color-text) text-center">
+                    {message}
+                  </p>
+                </div>
+              )}
+
               {/* Google login button */}
               <Button
                 variant="outline"

@@ -23,6 +23,7 @@ interface UseOnlineGameReturn {
   isDraw: boolean;
   opponentName: string | null;
   findMatch: () => Promise<void>;
+  joinRoom: (roomId: string) => Promise<void>;
   makeMove: (cellIndex: number) => Promise<boolean>;
   leaveGame: () => Promise<void>;
   error: string | null;
@@ -103,6 +104,14 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
 
   // Buscar partida
   const findMatch = useCallback(async () => {
+    // Validar que hay un usuario autenticado
+    if (!userId) {
+      console.error('[OnlineGame] findMatch called without userId');
+      setError('Usuario no autenticado');
+      setStatus('idle');
+      return;
+    }
+
     setError(null);
     setStatus('searching');
 
@@ -110,13 +119,17 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     cleanupSubscription();
 
     try {
+      console.log('[OnlineGame] Finding match for user:', userId);
       const newRoom = await gameRoomService.findOrCreateMatch(userId);
 
       if (!newRoom) {
+        console.error('[OnlineGame] findOrCreateMatch returned null');
         setError('Error al buscar partida');
         setStatus('idle');
         return;
       }
+
+      console.log('[OnlineGame] Got room:', newRoom.id, 'status:', newRoom.status);
 
       // Obtener sala con datos de jugadores
       const roomWithPlayers = await gameRoomService.getRoom(newRoom.id);
@@ -135,8 +148,59 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
         handleRoomUpdate
       );
     } catch (err) {
-      console.error('Error finding match:', err);
+      console.error('[OnlineGame] Error finding match:', err);
       setError('Error al buscar partida');
+      setStatus('idle');
+    }
+  }, [userId, handleRoomUpdate, cleanupSubscription]);
+
+  // Unirse a una sala específica por ID (para links compartidos)
+  const joinRoom = useCallback(async (roomId: string) => {
+    if (!userId) {
+      console.error('[OnlineGame] joinRoom called without userId');
+      setError('Usuario no autenticado');
+      setStatus('idle');
+      return;
+    }
+
+    setError(null);
+    setStatus('searching');
+
+    // Cleanup any existing subscription before creating new one
+    cleanupSubscription();
+
+    try {
+      console.log('[OnlineGame] Joining room:', roomId, 'for user:', userId);
+      const { room: newRoom, error: joinError } = await gameRoomService.joinRoomById(roomId, userId);
+
+      if (joinError || !newRoom) {
+        console.error('[OnlineGame] joinRoomById error:', joinError);
+        setError(joinError || 'Error al unirse a la sala');
+        setStatus('idle');
+        return;
+      }
+
+      console.log('[OnlineGame] Joined room:', newRoom.id, 'status:', newRoom.status);
+
+      // Obtener sala con datos de jugadores
+      const roomWithPlayers = await gameRoomService.getRoom(newRoom.id);
+      setRoom(roomWithPlayers);
+      setBoard(dbBoardToBoardState(newRoom.board as string[]));
+
+      if (newRoom.status === 'waiting') {
+        setStatus('waiting');
+      } else {
+        setStatus('playing');
+      }
+
+      // Suscribirse a cambios
+      unsubscribeRef.current = gameRoomService.subscribeToRoom(
+        newRoom.id,
+        handleRoomUpdate
+      );
+    } catch (err) {
+      console.error('[OnlineGame] Error joining room:', err);
+      setError('Error al unirse a la sala');
       setStatus('idle');
     }
   }, [userId, handleRoomUpdate, cleanupSubscription]);
@@ -287,6 +351,7 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     isDraw,
     opponentName,
     findMatch,
+    joinRoom,
     makeMove,
     leaveGame,
     error,

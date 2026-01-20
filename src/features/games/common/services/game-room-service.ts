@@ -36,6 +36,11 @@ class GameRoomService {
 
   // Crear una nueva sala
   async createRoom(playerId: string, gameType: string = 'tic-tac-toe'): Promise<GameRoom | null> {
+    if (!playerId) {
+      console.error('createRoom: playerId is required');
+      return null;
+    }
+
     const insertData = {
       game_type: gameType,
       player1_id: playerId,
@@ -82,6 +87,16 @@ class GameRoomService {
 
   // Unirse a una sala
   async joinRoom(roomId: string, playerId: string): Promise<GameRoom | null> {
+    if (!playerId) {
+      console.error('joinRoom: playerId is required');
+      return null;
+    }
+
+    if (!roomId) {
+      console.error('joinRoom: roomId is required');
+      return null;
+    }
+
     const updateData = {
       player2_id: playerId,
       status: 'playing',
@@ -270,17 +285,71 @@ class GameRoomService {
 
   // Buscar partida (matchmaking simple)
   async findOrCreateMatch(playerId: string, gameType: string = 'tic-tac-toe'): Promise<GameRoom | null> {
+    if (!playerId) {
+      console.error('findOrCreateMatch: playerId is required');
+      return null;
+    }
+
     // Buscar sala disponible
     const rooms = await this.findAvailableRooms(gameType);
+    console.log('[Matchmaking] Available rooms:', rooms.length, 'for player:', playerId);
+
     const availableRoom = rooms.find(r => r.player1_id !== playerId);
 
     if (availableRoom) {
+      console.log('[Matchmaking] Found room to join:', availableRoom.id);
       // Unirse a sala existente
-      return this.joinRoom(availableRoom.id, playerId);
+      const joinedRoom = await this.joinRoom(availableRoom.id, playerId);
+      if (joinedRoom) {
+        console.log('[Matchmaking] Successfully joined room:', joinedRoom.id);
+      } else {
+        console.log('[Matchmaking] Failed to join room, creating new one');
+        return this.createRoom(playerId, gameType);
+      }
+      return joinedRoom;
     }
 
+    console.log('[Matchmaking] No available rooms, creating new one');
     // Crear nueva sala
     return this.createRoom(playerId, gameType);
+  }
+
+  // Unirse a una sala específica por ID (para links compartidos)
+  async joinRoomById(roomId: string, playerId: string): Promise<{ room: GameRoom | null; error: string | null }> {
+    if (!playerId) {
+      return { room: null, error: 'Usuario no autenticado' };
+    }
+
+    if (!roomId) {
+      return { room: null, error: 'ID de sala no válido' };
+    }
+
+    // Verificar que la sala existe y está disponible
+    const room = await this.getRoom(roomId);
+    if (!room) {
+      return { room: null, error: 'Sala no encontrada' };
+    }
+
+    if (room.status !== 'waiting') {
+      return { room: null, error: 'Esta sala ya no está disponible' };
+    }
+
+    if (room.player2_id !== null) {
+      return { room: null, error: 'Esta sala ya está llena' };
+    }
+
+    if (room.player1_id === playerId) {
+      // Es el creador de la sala, devolver la sala existente
+      return { room: room, error: null };
+    }
+
+    // Intentar unirse
+    const joinedRoom = await this.joinRoom(roomId, playerId);
+    if (!joinedRoom) {
+      return { room: null, error: 'No se pudo unir a la sala' };
+    }
+
+    return { room: joinedRoom, error: null };
   }
 }
 

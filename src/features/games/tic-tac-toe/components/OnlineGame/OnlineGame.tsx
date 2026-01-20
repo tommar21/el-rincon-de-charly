@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, ArrowLeft, Globe, Loader2, LogOut } from 'lucide-react';
+import { RotateCcw, ArrowLeft, Globe, Loader2, LogOut, Copy, Check, X } from 'lucide-react';
 import { Board } from '../board';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,6 +27,7 @@ interface OnlineGameProps {
   opponentName: string | null;
   error: string | null;
   showLeaveConfirm: boolean;
+  roomId: string | null;
   onCellClick: (index: number) => Promise<boolean>;
   onLeave: () => void;
   onConfirmLeave: () => void;
@@ -45,6 +47,7 @@ export function OnlineGame({
   opponentName,
   error,
   showLeaveConfirm,
+  roomId,
   onCellClick,
   onLeave,
   onConfirmLeave,
@@ -53,6 +56,23 @@ export function OnlineGame({
   onRetry,
   onBack,
 }: OnlineGameProps) {
+  const [copied, setCopied] = useState(false);
+
+  const copyRoomLink = async () => {
+    if (!roomId) return;
+
+    const link = `${window.location.origin}/games/tic-tac-toe?room=${roomId}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+    }
+  };
+
+  const roomCode = roomId ? roomId.slice(0, 8).toUpperCase() : null;
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6">
       {/* Back to Hub button */}
@@ -105,9 +125,48 @@ export function OnlineGame({
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-(--color-success) rounded-full animate-ping" />
               </div>
               <p className="text-(--color-text-muted)">Esperando oponente...</p>
-              <p className="text-sm text-(--color-text-muted)">
-                Sala creada. Comparte con un amigo o espera a que alguien se una.
+
+              {/* Share section */}
+              {roomCode && (
+                <div className="bg-(--color-surface) border border-(--color-border) rounded-lg p-4 w-full max-w-xs">
+                  <p className="text-sm text-(--color-text-muted) mb-2">Código de sala:</p>
+                  <p className="text-2xl font-mono font-bold text-(--color-primary) tracking-wider mb-3">
+                    {roomCode}
+                  </p>
+                  <Button
+                    onClick={copyRoomLink}
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-2"
+                  >
+                    {copied ? (
+                      <>
+                        <Check size={16} />
+                        ¡Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={16} />
+                        Copiar link de invitación
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              <p className="text-sm text-(--color-text-muted) text-center max-w-xs">
+                Comparte el código o link con un amigo, o espera a que alguien se una automáticamente.
               </p>
+
+              {/* Prominent cancel button */}
+              <Button
+                onClick={onLeave}
+                variant="ghost"
+                className="mt-2 gap-2 text-(--color-text-muted) hover:text-(--color-error)"
+              >
+                <X size={18} />
+                Cancelar búsqueda
+              </Button>
             </motion.div>
           )}
 

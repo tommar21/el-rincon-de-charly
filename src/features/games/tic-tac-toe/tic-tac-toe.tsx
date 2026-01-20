@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { ModeSelection, GameScreen, OnlineGame } from './components';
 import { useTicTacToe } from './hooks/use-tic-tac-toe';
 import { useOnlineGame } from './hooks/use-online-game';
@@ -23,6 +24,7 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
   const [showAIConfig, setShowAIConfig] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingRoomJoin, setPendingRoomJoin] = useState(false);
   const [config, setConfig] = useState<LocalGameConfig>({
     mode: 'ai',
     playerSymbol: 'X',
@@ -33,6 +35,11 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
   const movesCountRef = useRef<number>(0);
   const { recordGame } = useStatsStore();
   const { user, isAuthenticated } = useAuth();
+
+  // URL params for shared room links
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const roomParam = searchParams.get('room');
 
   // Online game hook
   const onlineGame = useOnlineGame({
@@ -105,6 +112,28 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
   // Update moves count when game history changes
   movesCountRef.current = gameHistory.length;
 
+  // Handle shared room link - show auth modal if not authenticated
+  useEffect(() => {
+    if (roomParam && !isAuthenticated) {
+      console.log('[TicTacToe] Room param detected but user not authenticated, showing auth modal');
+      setPendingRoomJoin(true);
+      setShowAuthModal(true);
+    }
+  }, [roomParam, isAuthenticated]);
+
+  // Handle shared room link - auto-join when room param is present and user is authenticated
+  useEffect(() => {
+    if (roomParam && isAuthenticated && user?.id) {
+      console.log('[TicTacToe] Room param detected:', roomParam, 'User:', user.id);
+      setIsOnlineMode(true);
+      gameStartTimeRef.current = Date.now();
+      onlineGame.joinRoom(roomParam);
+      setPendingRoomJoin(false);
+      // Clear the URL param to avoid re-joining on refresh
+      router.replace('/games/tic-tac-toe', { scroll: false });
+    }
+  }, [roomParam, isAuthenticated, user?.id]);
+
   // Handlers
   const handleStartGame = (mode: GameMode) => {
     setConfig((prev) => ({ ...prev, mode }));
@@ -171,6 +200,7 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
         opponentName={onlineGame.opponentName}
         error={onlineGame.error}
         showLeaveConfirm={showLeaveConfirm}
+        roomId={onlineGame.room?.id || null}
         onCellClick={onlineGame.makeMove}
         onLeave={handleLeaveOnline}
         onConfirmLeave={confirmLeaveGame}
@@ -199,7 +229,11 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
         />
         <AuthModal
           isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
+          onClose={() => {
+            setShowAuthModal(false);
+            setPendingRoomJoin(false);
+          }}
+          message={pendingRoomJoin ? '¡Te han invitado a una partida! Inicia sesión para unirte.' : undefined}
         />
       </>
     );
