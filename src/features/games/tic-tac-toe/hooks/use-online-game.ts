@@ -133,7 +133,19 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
 
       // Obtener sala con datos de jugadores
       const roomWithPlayers = await gameRoomService.getRoom(newRoom.id);
-      setRoom(roomWithPlayers);
+
+      // Si getRoom falla, usar newRoom directamente (sin datos de jugadores)
+      if (roomWithPlayers) {
+        setRoom(roomWithPlayers);
+      } else {
+        // Fallback: crear objeto compatible usando newRoom
+        setRoom({
+          ...newRoom,
+          player1: undefined,
+          player2: undefined,
+        } as GameRoomWithPlayers);
+      }
+
       setBoard(dbBoardToBoardState(newRoom.board as string[]));
 
       if (newRoom.status === 'waiting') {
@@ -184,7 +196,19 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
 
       // Obtener sala con datos de jugadores
       const roomWithPlayers = await gameRoomService.getRoom(newRoom.id);
-      setRoom(roomWithPlayers);
+
+      // Si getRoom falla, usar newRoom directamente (sin datos de jugadores)
+      if (roomWithPlayers) {
+        setRoom(roomWithPlayers);
+      } else {
+        // Fallback: crear objeto compatible usando newRoom
+        setRoom({
+          ...newRoom,
+          player1: undefined,
+          player2: undefined,
+        } as GameRoomWithPlayers);
+      }
+
       setBoard(dbBoardToBoardState(newRoom.board as string[]));
 
       if (newRoom.status === 'waiting') {
