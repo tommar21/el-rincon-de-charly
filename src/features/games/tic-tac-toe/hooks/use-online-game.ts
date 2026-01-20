@@ -73,6 +73,7 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
 
   // Manejar actualizaciones de la sala - uses refs to avoid dependency changes
   const handleRoomUpdate = useCallback((updatedRoom: GameRoom) => {
+    console.log('[OnlineGame] handleRoomUpdate called:', updatedRoom.status, 'current status:', statusRef.current);
     setRoom(prev => prev ? { ...prev, ...updatedRoom } : null);
     const newBoard = dbBoardToBoardState(updatedRoom.board as string[]);
     setBoard(newBoard);
@@ -346,6 +347,36 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
       cleanupSubscription();
     };
   }, [cleanupSubscription]);
+
+  // Polling fallback: verificar estado de la sala cada 3 segundos mientras esperamos
+  // Esto es un fallback en caso de que Supabase Realtime no funcione correctamente
+  useEffect(() => {
+    // Solo hacer polling si estamos esperando oponente
+    if (status !== 'waiting' || !room) return;
+
+    console.log('[OnlineGame] Starting polling for room:', room.id);
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const updatedRoom = await gameRoomService.getRoom(room.id);
+        console.log('[OnlineGame] Poll result:', updatedRoom?.status);
+
+        if (updatedRoom && updatedRoom.status === 'playing') {
+          console.log('[OnlineGame] Opponent joined! Updating status via polling.');
+          setRoom(updatedRoom);
+          setBoard(dbBoardToBoardState(updatedRoom.board as string[]));
+          setStatus('playing');
+        }
+      } catch (err) {
+        console.error('[OnlineGame] Polling error:', err);
+      }
+    }, 3000); // Cada 3 segundos
+
+    return () => {
+      console.log('[OnlineGame] Stopping polling');
+      clearInterval(pollInterval);
+    };
+  }, [status, room?.id]);
 
   // Track previous status to detect transitions
   const prevStatusRef = useRef<OnlineGameStatus>('idle');
