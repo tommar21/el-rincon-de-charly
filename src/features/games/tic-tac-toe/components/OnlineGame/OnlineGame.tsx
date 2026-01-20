@@ -71,8 +71,6 @@ export function OnlineGame({
     }
   };
 
-  const roomCode = roomId ? roomId.slice(0, 8).toUpperCase() : null;
-
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6">
       {/* Back to Hub button */}
@@ -127,35 +125,29 @@ export function OnlineGame({
               <p className="text-(--color-text-muted)">Esperando oponente...</p>
 
               {/* Share section */}
-              {roomCode && (
-                <div className="bg-(--color-surface) border border-(--color-border) rounded-lg p-4 w-full max-w-xs">
-                  <p className="text-sm text-(--color-text-muted) mb-2">Código de sala:</p>
-                  <p className="text-2xl font-mono font-bold text-(--color-primary) tracking-wider mb-3">
-                    {roomCode}
-                  </p>
-                  <Button
-                    onClick={copyRoomLink}
-                    variant="outline"
-                    size="sm"
-                    className="w-full gap-2"
-                  >
-                    {copied ? (
-                      <>
-                        <Check size={16} />
-                        ¡Copiado!
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={16} />
-                        Copiar link de invitación
-                      </>
-                    )}
-                  </Button>
-                </div>
+              {roomId && (
+                <Button
+                  onClick={copyRoomLink}
+                  variant="outline"
+                  size="lg"
+                  className="gap-2"
+                >
+                  {copied ? (
+                    <>
+                      <Check size={18} />
+                      ¡Link copiado!
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={18} />
+                      Copiar link de invitación
+                    </>
+                  )}
+                </Button>
               )}
 
               <p className="text-sm text-(--color-text-muted) text-center max-w-xs">
-                Comparte el código o link con un amigo, o espera a que alguien se una automáticamente.
+                Comparte el link con un amigo, o espera a que alguien se una automáticamente.
               </p>
 
               {/* Prominent cancel button */}
@@ -227,27 +219,29 @@ export function OnlineGame({
         </motion.div>
       )}
 
-      {/* Action buttons */}
-      <div className="mt-8 flex gap-4">
-        {status === 'finished' && (
+      {/* Action buttons - only show for playing/finished states */}
+      {(status === 'playing' || status === 'finished') && (
+        <div className="mt-8 flex gap-4">
+          {status === 'finished' && (
+            <Button
+              onClick={onPlayAgain}
+              variant="primary"
+              className="gap-2"
+            >
+              <RotateCcw size={18} />
+              Jugar de nuevo
+            </Button>
+          )}
           <Button
-            onClick={onPlayAgain}
-            variant="primary"
+            onClick={onLeave}
+            variant="destructive"
             className="gap-2"
           >
-            <RotateCcw size={18} />
-            Jugar de nuevo
+            <LogOut size={18} />
+            {status === 'finished' ? 'Menú' : 'Abandonar'}
           </Button>
-        )}
-        <Button
-          onClick={onLeave}
-          variant="destructive"
-          className="gap-2"
-        >
-          <LogOut size={18} />
-          {status === 'finished' ? 'Menú' : 'Abandonar'}
-        </Button>
-      </div>
+        </div>
+      )}
 
       {/* Error with retry option */}
       {error && (
