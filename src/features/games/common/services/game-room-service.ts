@@ -18,6 +18,7 @@ export interface GameRoom {
   board: string[];
   winner_id: string | null;
   is_draw: boolean;
+  rematch_requested_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -257,7 +258,11 @@ class GameRoomService {
   }
 
   // Suscribirse a cambios en una sala
-  subscribeToRoom(roomId: string, callback: (room: GameRoom) => void): () => void {
+  subscribeToRoom(
+    roomId: string,
+    callback: (room: GameRoom) => void,
+    onError?: (error: Error) => void
+  ): () => void {
     // Crear un ID único para esta suscripción (permite múltiples jugadores en la misma sala)
     const subscriptionId = `${roomId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
 
@@ -284,7 +289,12 @@ class GameRoomService {
           }
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('[Realtime] Subscription error:', status, err);
+          onError?.(new Error(`Realtime subscription error: ${status}`));
+        }
+      });
 
     this.channels.set(subscriptionId, channel);
 
@@ -364,6 +374,129 @@ class GameRoomService {
     }
 
     return { room: joinedRoom, error: null };
+  }
+
+  // Solicitar revancha
+  async requestRematch(roomId: string, playerId: string): Promise<boolean> {
+    if (!roomId || !playerId) {
+      console.error('requestRematch: roomId and playerId are required');
+      return false;
+    }
+
+    const room = await this.getRoom(roomId);
+    if (!room || room.status !== 'finished') {
+      console.error('requestRematch: room not found or not finished');
+      return false;
+    }
+
+    // Verificar que el jugador es parte de esta sala
+    if (room.player1_id !== playerId && room.player2_id !== playerId) {
+      console.error('requestRematch: player is not part of this room');
+      return false;
+    }
+
+    const updateData = {
+      rematch_requested_by: playerId,
+      updated_at: new Date().toISOString(),
+    } satisfies GameRoomUpdate;
+
+    const { error } = await (this.supabase
+      .from('game_rooms') as ReturnType<typeof this.supabase.from>)
+      .update(updateData)
+      .eq('id', roomId);
+
+    if (error) {
+      console.error('Error requesting rematch:', error);
+      return false;
+    }
+
+    return true;
+  }
+
+  // Aceptar revancha - crea nueva sala con roles invertidos
+  async acceptRematch(roomId: string, playerId: string): Promise<GameRoom | null> {
+    if (!roomId || !playerId) {
+      console.error('acceptRematch: roomId and playerId are required');
+      return null;
+    }
+
+    const room = await this.getRoom(roomId);
+    if (!room || room.status !== 'finished') {
+      console.error('acceptRematch: room not found or not finished');
+      return null;
+    }
+
+    // Verificar que hay una solicitud de revancha pendiente
+    if (!room.rematch_requested_by) {
+      console.error('acceptRematch: no rematch request pending');
+      return null;
+    }
+
+    // El que acepta debe ser el otro jugador (no el que solicitó)
+    if (room.rematch_requested_by === playerId) {
+      console.error('acceptRematch: cannot accept your own rematch request');
+      return null;
+    }
+
+    // Verificar que el jugador es parte de esta sala
+    if (room.player1_id !== playerId && room.player2_id !== playerId) {
+      console.error('acceptRematch: player is not part of this room');
+      return null;
+    }
+
+    // Crear nueva sala con roles invertidos
+    // El que era player2 ahora es player1 (y empieza)
+    const newPlayer1 = room.player2_id;
+    const newPlayer2 = room.player1_id;
+
+    const insertData = {
+      game_type: room.game_type,
+      player1_id: newPlayer1,
+      player2_id: newPlayer2,
+      current_turn: newPlayer1, // El nuevo player1 empieza
+      status: 'playing',
+    } satisfies GameRoomInsert;
+
+    const { data, error } = await (this.supabase
+      .from('game_rooms') as ReturnType<typeof this.supabase.from>)
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating rematch room:', error);
+      return null;
+    }
+
+    // Limpiar la solicitud de revancha de la sala anterior
+    await this.clearRematchRequest(roomId);
+
+    return data as GameRoom;
+  }
+
+  // Rechazar/cancelar revancha
+  async declineRematch(roomId: string): Promise<boolean> {
+    return this.clearRematchRequest(roomId);
+  }
+
+  // Limpiar solicitud de revancha
+  private async clearRematchRequest(roomId: string): Promise<boolean> {
+    const updateData = {
+      rematch_requested_by: null,
+      updated_at: new Date().toISOString(),
+    } satisfies GameRoomUpdate;
+
+    const { error } = await (this.supabase
+      .from('game_rooms') as ReturnType<typeof this.supabase.from>)
+      .update(updateData)
+      .eq('id', roomId);
+
+    if (error) {
+      console.error('Error clearing rematch request:', error);
+      return false;
+    }
+
+    return true;
   }
 }
 

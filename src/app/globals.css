@@ -56,6 +56,37 @@
   100% { background-position: 200% 0; }
 }
 
+/* Modal Flip 3D animations */
+@keyframes flip-in {
+  0% {
+    opacity: 0;
+    transform: perspective(800px) rotateY(-90deg) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(800px) rotateY(0deg) scale(1);
+  }
+}
+
+@keyframes flip-out {
+  0% {
+    opacity: 1;
+    transform: perspective(800px) rotateY(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(800px) rotateY(90deg) scale(0.9);
+  }
+}
+
+.animate-flip-in {
+  animation: flip-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-flip-out {
+  animation: flip-out 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* ============================================
    THEME: EMBER (Orange/Coral - Default)
    ============================================ */
@@ -93,8 +124,8 @@
 
   /* Text */
   --color-text: #F5F5F7;
-  --color-text-muted: #9898A0;
-  --color-text-subtle: #6B6B73;
+  --color-text-muted: #AFAFB8; /* Improved contrast ratio for WCAG AA */
+  --color-text-subtle: #7A7A84; /* Improved contrast ratio */
 
   /* States */
   --color-success: #22C55E;
@@ -248,76 +279,79 @@
 }
 
 /* ============================================
-   THEME: DAWN (Light Theme)
+   THEME: NEON (Cyber/Futuristic)
    ============================================ */
-[data-theme="dawn"] {
-  /* Primary - Orange (darker for contrast) */
-  --color-primary: #EA580C;
-  --color-primary-dark: #C2410C;
-  --color-primary-light: #F97316;
-  --color-primary-rgb: 234, 88, 12;
+[data-theme="neon"] {
+  /* Primary - Cyan brillante */
+  --color-primary: #00F5FF;
+  --color-primary-dark: #00C4CC;
+  --color-primary-light: #5CFFFF;
+  --color-primary-rgb: 0, 245, 255;
+  --color-primary-foreground: #000000;
 
-  /* Secondary - Purple */
-  --color-secondary: #7C3AED;
-  --color-secondary-dark: #6D28D9;
-  --color-secondary-light: #8B5CF6;
+  /* Secondary - Magenta */
+  --color-secondary: #FF00FF;
+  --color-secondary-dark: #CC00CC;
+  --color-secondary-light: #FF66FF;
+  --color-secondary-foreground: #000000;
 
-  /* Accent - Amber */
-  --color-accent: #D97706;
-  --color-accent-dark: #B45309;
-  --color-accent-light: #F59E0B;
+  /* Accent - Verde neón */
+  --color-accent: #39FF14;
+  --color-accent-dark: #2ECC10;
+  --color-accent-light: #66FF4D;
+  --color-accent-foreground: #000000;
 
-  /* Backgrounds - Clean light */
-  --color-background: #FAFAFA;
-  --color-surface: #FFFFFF;
-  --color-surface-hover: #F5F5F5;
-  --color-surface-elevated: #FFFFFF;
+  /* Backgrounds - Deep dark */
+  --color-background: #0A0A0F;
+  --color-surface: #12121A;
+  --color-surface-hover: #1E1E2E;
+  --color-surface-elevated: #18182A;
 
   /* Borders */
-  --color-border: #E5E5E5;
-  --color-border-hover: #D4D4D4;
-  --color-border-focus: rgba(234, 88, 12, 0.5);
+  --color-border: #2A2A3E;
+  --color-border-hover: #3A3A52;
+  --color-border-focus: rgba(0, 245, 255, 0.5);
 
   /* Text */
-  --color-text: #171717;
-  --color-text-muted: #525252;
-  --color-text-subtle: #737373;
+  --color-text: #FFFFFF;
+  --color-text-muted: #8888AA;
+  --color-text-subtle: #5555777;
 
   /* States */
-  --color-success: #16A34A;
-  --color-success-muted: #15803D;
-  --color-warning: #D97706;
-  --color-warning-muted: #B45309;
-  --color-error: #DC2626;
-  --color-error-muted: #B91C1C;
+  --color-success: #00FF88;
+  --color-success-muted: #00CC6A;
+  --color-warning: #FFE600;
+  --color-warning-muted: #CCB800;
+  --color-error: #FF3366;
+  --color-error-muted: #CC2952;
 
   /* Casino colors */
-  --color-casino-gold: #CA8A04;
-  --color-casino-bet: #EA580C;
+  --color-casino-gold: #FFD700;
+  --color-casino-bet: #00F5FF;
 
-  /* Shadows - Softer */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-accent: 0 4px 12px rgba(234, 88, 12, 0.1);
-  --shadow-glow-cyan: 0 4px 16px rgba(234, 88, 12, 0.2);
-  --shadow-glow-magenta: 0 4px 16px rgba(124, 58, 237, 0.2);
-  --shadow-glow-accent: 0 4px 16px rgba(217, 119, 6, 0.2);
+  /* Shadows - Neon glow style */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.7);
+  --shadow-accent: 0 4px 12px rgba(0, 245, 255, 0.2);
+  --shadow-glow-cyan: 0 4px 20px rgba(0, 245, 255, 0.4);
+  --shadow-glow-magenta: 0 4px 20px rgba(255, 0, 255, 0.4);
+  --shadow-glow-accent: 0 4px 20px rgba(57, 255, 20, 0.4);
 
-  /* Glows for interactive elements */
-  --glow-primary: 0 0 16px rgba(234, 88, 12, 0.25);
-  --glow-secondary: 0 0 16px rgba(124, 58, 237, 0.25);
-  --glow-success: 0 0 16px rgba(22, 163, 74, 0.25);
+  /* Glows for interactive elements - extra vibrant */
+  --glow-primary: 0 0 20px rgba(0, 245, 255, 0.5), 0 0 40px rgba(0, 245, 255, 0.2);
+  --glow-secondary: 0 0 20px rgba(255, 0, 255, 0.5), 0 0 40px rgba(255, 0, 255, 0.2);
+  --glow-success: 0 0 20px rgba(0, 255, 136, 0.5);
 
   /* Glass effect */
-  --glass-backdrop: rgba(255, 255, 255, 0.9);
-  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-backdrop: rgba(18, 18, 26, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.1);
 
-  /* Shadcn overrides for light */
-  --primary-foreground: #FFFFFF;
+  /* Shadcn overrides */
+  --primary-foreground: #000000;
   --ring: var(--color-primary);
-  --sidebar-background: #FFFFFF;
-  --sidebar-border: #E5E5E5;
+  --sidebar-background: var(--color-surface);
+  --sidebar-border: var(--color-border);
 }
 
 /* ============================================
@@ -340,7 +374,7 @@ body {
    LAYOUT - Main Content
    ============================================ */
 .main-content {
-  margin-left: var(--sidebar-width);
+  /* margin-left is set dynamically via JS based on sidebar collapsed state */
   min-height: 100vh;
   padding-right: 1rem; /* Prevent cards from touching right edge */
 }

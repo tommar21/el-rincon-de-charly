@@ -19,6 +19,10 @@ export function PageTransition({ children }: PageTransitionProps) {
   const pathname = usePathname();
   const { shouldReduceMotion } = useMotionConfig();
 
+  // Skip animations for game routes to prevent flickering
+  // Game routes have their own loading states and transitions
+  const isGameRoute = pathname?.startsWith('/games/');
+
   // Memoize variants and transition based on reduced motion preference
   const pageVariants = useMemo(
     () => getReducedMotionVariants(shouldReduceMotion, defaultPageVariants),
@@ -29,6 +33,11 @@ export function PageTransition({ children }: PageTransitionProps) {
     () => getReducedMotionTransition(shouldReduceMotion, TRANSITIONS.page),
     [shouldReduceMotion]
   );
+
+  // For game routes, render without animation wrapper
+  if (isGameRoute) {
+    return <div className="min-h-full">{children}</div>;
+  }
 
   return (
     <AnimatePresence mode="wait" initial={false}>

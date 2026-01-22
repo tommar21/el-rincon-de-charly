@@ -3,7 +3,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getClient } from '@/lib/supabase/client';
-import type { GameResult, Stats, GameStatsRow } from '../types';
+import type { GameResult, Stats } from '../types';
+import type { InsertTables } from '@/types/supabase.types';
+import { validateGameStatsRow } from '@/lib/validators/database-rows';
+
+// Properly typed insert for game_stats table
+type GameStatsInsert = InsertTables<'game_stats'>;
 
 // Sync configuration
 const SYNC_INTERVAL = 30 * 1000; // 30 seconds
@@ -53,21 +58,25 @@ async function syncStatsToSupabase(
   const supabase = getClient();
 
   try {
-    const { error } = await supabase
-      .from('game_stats')
-      .upsert({
-        user_id: userId,
-        game_type: 'tic-tac-toe',
-        games_played: stats.gamesPlayed,
-        games_won: stats.gamesWon,
-        games_lost: stats.gamesLost,
-        games_draw: stats.gamesDraw,
-        win_streak: stats.winStreak,
-        best_win_streak: stats.bestWinStreak,
-        total_play_time: stats.totalPlayTime,
-        by_opponent: stats.byOpponent,
-        updated_at: new Date().toISOString(),
-      } as never, {
+    const upsertData: GameStatsInsert = {
+      user_id: userId,
+      game_type: 'tic-tac-toe',
+      games_played: stats.gamesPlayed,
+      games_won: stats.gamesWon,
+      games_lost: stats.gamesLost,
+      games_draw: stats.gamesDraw,
+      win_streak: stats.winStreak,
+      best_win_streak: stats.bestWinStreak,
+      total_play_time: stats.totalPlayTime,
+      by_opponent: stats.byOpponent,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Type assertion needed due to Supabase SSR client type inference issue
+    // Our GameStatsInsert type matches Database['public']['Tables']['game_stats']['Insert']
+    const { error } = await (supabase
+      .from('game_stats') as ReturnType<typeof supabase.from>)
+      .upsert(upsertData, {
         onConflict: 'user_id,game_type',
       });
 
@@ -111,17 +120,22 @@ async function loadStatsFromSupabase(userId: string): Promise<Stats | null> {
     }
 
     if (data) {
-      const row = data as unknown as GameStatsRow;
-      return {
-        gamesPlayed: row.games_played || 0,
-        gamesWon: row.games_won || 0,
-        gamesLost: row.games_lost || 0,
-        gamesDraw: row.games_draw || 0,
-        winStreak: row.win_streak || 0,
-        bestWinStreak: row.best_win_streak || 0,
-        totalPlayTime: row.total_play_time || 0,
-        byOpponent: row.by_opponent || {},
-      };
+      try {
+        const row = validateGameStatsRow(data, 'loadStatsFromSupabase');
+        return {
+          gamesPlayed: row.games_played,
+          gamesWon: row.games_won,
+          gamesLost: row.games_lost,
+          gamesDraw: row.games_draw,
+          winStreak: row.win_streak,
+          bestWinStreak: row.best_win_streak,
+          totalPlayTime: row.total_play_time,
+          byOpponent: row.by_opponent,
+        };
+      } catch {
+        console.error('Invalid game stats data received');
+        return null;
+      }
     }
     return null;
   } catch (err) {

@@ -15,7 +15,7 @@ import {
   ModalDescription,
 } from '@/components/ui/modal';
 import type { BoardState, WinResult } from '../../types';
-import type { OnlineGameStatus } from '../../hooks/use-online-game';
+import type { OnlineGameStatus, RematchStatus } from '../../hooks/use-online-game';
 
 interface OnlineGameProps {
   status: OnlineGameStatus;
@@ -35,6 +35,11 @@ interface OnlineGameProps {
   onPlayAgain: () => void;
   onRetry: () => void;
   onBack?: () => void;
+  // Rematch props
+  rematchStatus: RematchStatus;
+  onRequestRematch: () => void;
+  onAcceptRematch: () => void;
+  onDeclineRematch: () => void;
 }
 
 export function OnlineGame({
@@ -55,6 +60,10 @@ export function OnlineGame({
   onPlayAgain,
   onRetry,
   onBack,
+  rematchStatus,
+  onRequestRematch,
+  onAcceptRematch,
+  onDeclineRematch,
 }: OnlineGameProps) {
   const [copied, setCopied] = useState(false);
 
@@ -221,17 +230,72 @@ export function OnlineGame({
 
       {/* Action buttons - only show for playing/finished states */}
       {(status === 'playing' || status === 'finished') && (
-        <div className="mt-8 flex gap-4">
+        <div className="mt-8 flex flex-col items-center gap-4">
           {status === 'finished' && (
-            <Button
-              onClick={onPlayAgain}
-              variant="primary"
-              className="gap-2"
-            >
-              <RotateCcw size={18} />
-              Jugar de nuevo
-            </Button>
+            <>
+              {/* Rematch UI */}
+              {rematchStatus === 'none' && (
+                <div className="flex gap-4">
+                  <Button
+                    onClick={onRequestRematch}
+                    variant="primary"
+                    className="gap-2"
+                  >
+                    <RotateCcw size={18} />
+                    Revancha
+                  </Button>
+                  <Button
+                    onClick={onPlayAgain}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    Nueva partida
+                  </Button>
+                </div>
+              )}
+
+              {rematchStatus === 'requested' && (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex items-center gap-2 text-(--color-text-muted)">
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>Esperando respuesta de {opponentName || 'oponente'}...</span>
+                  </div>
+                  <Button
+                    onClick={onDeclineRematch}
+                    variant="ghost"
+                    size="sm"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              )}
+
+              {rematchStatus === 'received' && (
+                <div className="flex flex-col items-center gap-3">
+                  <p className="text-(--color-accent) font-semibold">
+                    ¡{opponentName || 'Tu oponente'} quiere la revancha!
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={onAcceptRematch}
+                      variant="primary"
+                      className="gap-2"
+                    >
+                      <Check size={18} />
+                      Aceptar
+                    </Button>
+                    <Button
+                      onClick={onDeclineRematch}
+                      variant="ghost"
+                    >
+                      Rechazar
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
+
           <Button
             onClick={onLeave}
             variant="destructive"

@@ -50,7 +50,7 @@ export function Board({
       animate="visible"
     >
       {board.map((cell, index) => (
-        <motion.div key={index} variants={cellVariants}>
+        <motion.div key={`cell-${index}`} variants={cellVariants}>
           <Cell
             value={cell}
             index={index}

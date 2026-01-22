@@ -1,13 +1,41 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Users, Globe, ArrowLeft, Zap } from 'lucide-react';
+import { Bot, Users, Globe, ArrowLeft, Zap, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils/cn';
 import type { AIDifficulty } from '../../../common/types/game.types';
 import type { GameMode } from '../../../registry/types';
+
+// Difficulty config data - compact version without emojis
+const DIFFICULTIES: {
+  value: AIDifficulty;
+  label: string;
+  stars: number;
+}[] = [
+  { value: 'easy', label: 'Fácil', stars: 1 },
+  { value: 'medium', label: 'Medio', stars: 2 },
+  { value: 'hard', label: 'Difícil', stars: 3 },
+  { value: 'impossible', label: 'Imposible', stars: 4 },
+];
+
+// Compact star rating
+function StarRating({ count, max = 4, size = 12 }: { count: number; max?: number; size?: number }) {
+  return (
+    <div className="flex gap-0.5">
+      {Array.from({ length: max }).map((_, i) => (
+        <Star
+          key={i}
+          size={size}
+          className={cn(
+            'transition-colors',
+            i < count ? 'fill-(--color-warning) text-(--color-warning)' : 'text-(--color-text-muted)/30'
+          )}
+        />
+      ))}
+    </div>
+  );
+}
 
 interface LocalGameConfig {
   mode: GameMode;
@@ -39,14 +67,14 @@ export function ModeSelection({
   onPlayOnline,
 }: ModeSelectionProps) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6">
-      {/* Back to Hub button */}
+    <div className="relative flex flex-col items-center justify-center min-h-screen p-6">
+      {/* Back to Hub button - positioned relative to container, not viewport */}
       {onBack && (
         <Button
           onClick={onBack}
           variant="ghost"
           size="sm"
-          className="absolute top-4 left-4 gap-2"
+          className="absolute top-4 left-4 gap-2 z-10"
         >
           <ArrowLeft size={18} />
           <span className="hidden sm:inline">Volver</span>
@@ -54,12 +82,12 @@ export function ModeSelection({
       )}
 
       <motion.div
-        className="text-center mb-12"
+        className="text-center mb-10"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <span className="text-6xl block mb-4">#️⃣</span>
-        <h1 className="text-4xl sm:text-5xl font-heading font-bold text-(--color-text)">
+        <span className="text-5xl block mb-3">#️⃣</span>
+        <h1 className="text-3xl sm:text-4xl font-heading font-bold text-(--color-text)">
           Tic Tac Toe
         </h1>
       </motion.div>
@@ -68,7 +96,7 @@ export function ModeSelection({
         {!showAIConfig ? (
           <motion.div
             key="mode-select"
-            className="flex flex-col gap-4 w-full max-w-sm"
+            className="flex flex-col gap-3 w-full max-w-xs"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -79,9 +107,9 @@ export function ModeSelection({
               onClick={onShowAIConfig}
               variant="primary"
               size="lg"
-              className="w-full gap-3 text-lg py-6"
+              className="w-full gap-2.5 py-5"
             >
-              <Bot size={24} />
+              <Bot size={20} />
               Jugar vs IA
             </Button>
 
@@ -90,9 +118,9 @@ export function ModeSelection({
               onClick={() => onStartGame('local')}
               variant="secondary"
               size="lg"
-              className="w-full gap-3 text-lg py-6"
+              className="w-full gap-2.5 py-5"
             >
-              <Users size={24} />
+              <Users size={20} />
               2 Jugadores
             </Button>
 
@@ -101,106 +129,97 @@ export function ModeSelection({
               onClick={onPlayOnline}
               variant={isAuthenticated ? 'success' : 'outline'}
               size="lg"
-              className="w-full gap-3 text-lg py-6"
+              className="w-full gap-2.5 py-5"
             >
-              <Globe size={24} />
+              <Globe size={20} />
               {isAuthenticated ? 'Jugar Online' : 'Online (Inicia sesión)'}
             </Button>
           </motion.div>
         ) : (
           <motion.div
             key="ai-config"
-            className="flex flex-col gap-6 w-full max-w-md"
+            className="flex flex-col gap-4 w-full max-w-xs"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ delay: 0.2 }}
           >
-            <Card>
-              <CardContent className="p-6 space-y-6">
-                {/* AI Difficulty selector */}
-                <div>
-                  <p className="text-sm font-medium text-(--color-text-muted) mb-3 text-center">
-                    Dificultad de la IA
-                  </p>
-                  <ToggleGroup
-                    type="single"
-                    value={config.aiDifficulty}
-                    onValueChange={(value) => value && onConfigChange({ aiDifficulty: value as AIDifficulty })}
-                    className="w-full grid grid-cols-4 gap-2"
+            {/* AI Difficulty selector - Compact horizontal pills */}
+            <div>
+              <p className="text-xs font-medium text-(--color-text-muted) mb-2 text-center uppercase tracking-wide">
+                Dificultad
+              </p>
+              <div className="flex gap-1.5 p-1 bg-(--color-surface) rounded-lg border border-(--color-border)">
+                {DIFFICULTIES.map((diff) => (
+                  <button
+                    key={diff.value}
+                    onClick={() => onConfigChange({ aiDifficulty: diff.value })}
+                    className={cn(
+                      'flex-1 flex flex-col items-center gap-0.5 py-2 px-1 rounded-md',
+                      'transition-all duration-150',
+                      config.aiDifficulty === diff.value
+                        ? 'bg-(--color-primary) text-white shadow-sm'
+                        : 'hover:bg-(--color-background) text-(--color-text-muted) hover:text-(--color-text)'
+                    )}
                   >
-                    <ToggleGroupItem
-                      value="easy"
-                      className="data-[state=on]:bg-(--color-primary) data-[state=on]:text-white"
-                    >
-                      Fácil
-                    </ToggleGroupItem>
-                    <ToggleGroupItem
-                      value="medium"
-                      className="data-[state=on]:bg-(--color-primary) data-[state=on]:text-white"
-                    >
-                      Medio
-                    </ToggleGroupItem>
-                    <ToggleGroupItem
-                      value="hard"
-                      className="data-[state=on]:bg-(--color-primary) data-[state=on]:text-white"
-                    >
-                      Difícil
-                    </ToggleGroupItem>
-                    <ToggleGroupItem
-                      value="impossible"
-                      className="data-[state=on]:bg-(--color-primary) data-[state=on]:text-white text-xs"
-                    >
-                      Imposible
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
+                    <span className="text-xs font-medium">{diff.label}</span>
+                    <StarRating
+                      count={diff.stars}
+                      size={8}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                {/* Symbol selector */}
-                <div>
-                  <p className="text-sm font-medium text-(--color-text-muted) mb-3 text-center">
-                    Tu símbolo
-                  </p>
-                  <ToggleGroup
-                    type="single"
-                    value={config.playerSymbol}
-                    onValueChange={(value) => value && onConfigChange({ playerSymbol: value as 'X' | 'O' })}
-                    className="w-full grid grid-cols-2 gap-3"
-                  >
-                    <ToggleGroupItem
-                      value="X"
-                      className={cn(
-                        'py-4 text-2xl font-bold',
-                        'data-[state=on]:bg-(--color-primary) data-[state=on]:text-white',
-                        'data-[state=off]:text-(--color-primary)'
-                      )}
-                    >
-                      X
-                    </ToggleGroupItem>
-                    <ToggleGroupItem
-                      value="O"
-                      className={cn(
-                        'py-4 text-2xl font-bold',
-                        'data-[state=on]:bg-(--color-secondary) data-[state=on]:text-white',
-                        'data-[state=off]:text-(--color-secondary)'
-                      )}
-                    >
-                      O
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Symbol selector - Compact toggle */}
+            <div>
+              <p className="text-xs font-medium text-(--color-text-muted) mb-2 text-center uppercase tracking-wide">
+                Tu símbolo
+              </p>
+              <div className="flex gap-1.5 p-1 bg-(--color-surface) rounded-lg border border-(--color-border)">
+                {/* X Symbol */}
+                <button
+                  onClick={() => onConfigChange({ playerSymbol: 'X' })}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-3 rounded-md',
+                    'transition-all duration-150',
+                    config.playerSymbol === 'X'
+                      ? 'bg-(--color-primary) text-white shadow-sm'
+                      : 'hover:bg-(--color-background) text-(--color-text-muted) hover:text-(--color-text)'
+                  )}
+                >
+                  <span className="text-xl font-bold">✕</span>
+                  <span className="text-xs">Empiezas tú</span>
+                </button>
+
+                {/* O Symbol */}
+                <button
+                  onClick={() => onConfigChange({ playerSymbol: 'O' })}
+                  className={cn(
+                    'flex-1 flex items-center justify-center gap-2 py-3 rounded-md',
+                    'transition-all duration-150',
+                    config.playerSymbol === 'O'
+                      ? 'bg-(--color-secondary) text-white shadow-sm'
+                      : 'hover:bg-(--color-background) text-(--color-text-muted) hover:text-(--color-text)'
+                  )}
+                >
+                  <span className="text-xl font-bold">○</span>
+                  <span className="text-xs">Empieza IA</span>
+                </button>
+              </div>
+            </div>
 
             {/* Action buttons */}
-            <div className="flex gap-3">
+            <div className="flex gap-2 pt-1">
               <Button
                 onClick={onHideAIConfig}
                 variant="ghost"
-                className="flex-1 gap-2"
+                size="sm"
+                className="gap-1.5"
               >
-                <ArrowLeft size={18} />
-                Volver
+                <ArrowLeft size={16} />
+                Atrás
               </Button>
               <Button
                 onClick={() => onStartGame('ai')}

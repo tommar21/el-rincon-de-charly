@@ -58,12 +58,12 @@ const themes: ThemeOption[] = [
     },
   },
   {
-    name: 'dawn',
-    label: 'Dawn',
-    description: 'Claro y limpio',
+    name: 'neon',
+    label: 'Neon',
+    description: 'Vibrante y futurista',
     colors: {
-      primary: '#EA580C',
-      secondary: '#7C3AED',
+      primary: '#00F5FF',
+      secondary: '#FF00FF',
     },
   },
 ];

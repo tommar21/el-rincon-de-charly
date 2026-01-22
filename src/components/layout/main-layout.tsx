@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Sidebar, MobileSidebar, type GameSection } from './sidebar';
+import { useState, useEffect } from 'react';
+import { Sidebar, MobileSidebar, useIsCollapsed } from './sidebar';
 import { MobileNav } from './mobile-nav';
 import { CommandPalette } from '@/components/global/command-palette';
 import { PageTransition } from '@/components/client/page-transition';
@@ -11,44 +11,42 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const [currentSection, setCurrentSection] = useState<GameSection>('arcade');
-  const [currentCategory, setCurrentCategory] = useState<string | undefined>(
-    undefined
-  );
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const isCollapsed = useIsCollapsed();
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSearchClick = () => {
     setIsCommandPaletteOpen(true);
   };
 
+  // Calculate margin based on collapsed state (only on desktop)
+  const mainMargin = mounted && isCollapsed
+    ? 'var(--sidebar-collapsed-width)'
+    : 'var(--sidebar-width)';
+
   return (
     <div className="relative min-h-screen bg-(--color-background)">
       {/* Desktop Sidebar */}
-      <Sidebar
-        currentSection={currentSection}
-        onSectionChange={setCurrentSection}
-        currentCategory={currentCategory}
-        onCategoryChange={setCurrentCategory}
-      />
+      <Sidebar />
 
       {/* Main Content */}
-      <main className="main-content min-h-screen">
+      <main
+        className="main-content min-h-screen transition-[margin] duration-200 ease-out"
+        style={{ marginLeft: mounted ? mainMargin : 'var(--sidebar-width)' }}
+      >
         <PageTransition>{children}</PageTransition>
       </main>
 
       {/* Mobile Bottom Navigation */}
       <MobileNav
-        currentSection={currentSection}
-        onSectionChange={setCurrentSection}
         onSearchClick={handleSearchClick}
         mobileSidebar={
-          <MobileSidebar
-            currentSection={currentSection}
-            onSectionChange={setCurrentSection}
-            currentCategory={currentCategory}
-            onCategoryChange={setCurrentCategory}
-            onSearchClick={handleSearchClick}
-          />
+          <MobileSidebar onSearchClick={handleSearchClick} />
         }
       />
 

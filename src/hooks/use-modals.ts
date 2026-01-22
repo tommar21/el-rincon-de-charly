@@ -62,8 +62,14 @@ export function useModals<T extends string>(modalNames: readonly T[]): UseModals
   }, []);
 
   const closeAll = useCallback((): void => {
-    setState(initialState);
-  }, [initialState]);
+    // Don't reference initialState to avoid dependency recreation
+    setState(prev =>
+      Object.keys(prev).reduce((acc, key) => {
+        acc[key as T] = false;
+        return acc;
+      }, {} as ModalState<T>)
+    );
+  }, []);
 
   return {
     isOpen,

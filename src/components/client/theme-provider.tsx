@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 
-export type Theme = 'ember' | 'midnight' | 'dawn';
+export type Theme = 'ember' | 'midnight' | 'neon';
 
 interface ThemeContextType {
   theme: Theme;
@@ -21,12 +21,12 @@ const THEME_KEY = 'el-rincon-theme';
 
 // Migration map for old theme names
 const THEME_MIGRATION: Record<string, Theme> = {
-  neon: 'ember',
   dark: 'midnight',
-  light: 'dawn',
+  light: 'ember',
+  dawn: 'neon', // Migrate old dawn users to neon
 };
 
-const VALID_THEMES: Theme[] = ['ember', 'midnight', 'dawn'];
+const VALID_THEMES: Theme[] = ['ember', 'midnight', 'neon'];
 
 interface ThemeProviderProps {
   children: ReactNode;

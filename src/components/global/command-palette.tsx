@@ -8,7 +8,7 @@ import {
   Crown,
   CircleDot,
   Gamepad2,
-  Sun,
+  Zap,
   Moon,
   Flame,
   Settings,
@@ -46,10 +46,10 @@ const games = [
 ];
 
 // Theme options
-const themes: { name: Theme; label: string; icon: typeof Sun }[] = [
+const themes: { name: Theme; label: string; icon: typeof Zap }[] = [
   { name: 'ember', label: 'Ember', icon: Flame },
   { name: 'midnight', label: 'Midnight', icon: Moon },
-  { name: 'dawn', label: 'Dawn', icon: Sun },
+  { name: 'neon', label: 'Neon', icon: Zap },
 ];
 
 interface CommandPaletteProps {

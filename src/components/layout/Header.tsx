@@ -1,12 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { Menu } from 'lucide-react';
 import { ThemeSelector } from '@/features/settings';
 import { UserMenu } from '@/features/auth';
-import { WalletBalance, WalletModal } from '@/features/wallet';
+import { WalletBalance } from '@/features/wallet';
 import { cn } from '@/lib/utils';
+
+// Dynamic import for modal - reduces initial bundle
+const WalletModal = dynamic(() => import('@/features/wallet').then(m => m.WalletModal), { ssr: false });
 
 /**
  * Fixed Header Component

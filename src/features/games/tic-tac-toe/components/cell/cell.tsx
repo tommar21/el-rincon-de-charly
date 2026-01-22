@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { CellValue } from '../../types';
 import { cn } from '@/lib/utils/cn';
 import { XMark } from './x-mark';
@@ -75,26 +75,32 @@ export function Cell({
         value ? `Cell ${index + 1}: ${value}` : `Cell ${index + 1}: empty`
       }
     >
-      {value === 'X' && (
-        <motion.div
-          className="w-[60%] h-[60%]"
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-        >
-          <XMark className="w-full h-full" />
-        </motion.div>
-      )}
-      {value === 'O' && (
-        <motion.div
-          className="w-[60%] h-[60%]"
-          initial={{ scale: 0, rotate: 180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-        >
-          <OMark className="w-full h-full" />
-        </motion.div>
-      )}
+      <AnimatePresence mode="wait">
+        {value === 'X' && (
+          <motion.div
+            key={`cell-${index}-x`}
+            className="w-[60%] h-[60%]"
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+          >
+            <XMark className="w-full h-full" />
+          </motion.div>
+        )}
+        {value === 'O' && (
+          <motion.div
+            key={`cell-${index}-o`}
+            className="w-[60%] h-[60%]"
+            initial={{ scale: 0, rotate: 180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            exit={{ scale: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+          >
+            <OMark className="w-full h-full" />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.button>
   );
 }

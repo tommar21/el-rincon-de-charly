@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Hash, Circle, Crown, CircleDot, Gamepad2, Bot, Users, Wifi, Coins } from 'lucide-react';
@@ -27,6 +27,7 @@ const gameIcons: Record<string, typeof Hash> = {
 export function GameCard({ game, index = 0 }: GameCardProps) {
   const Icon = gameIcons[game.slug] || Gamepad2;
   const { shouldReduceMotion } = useMotionConfig();
+  const [isHovered, setIsHovered] = useState(false);
 
   // Animation variants that respect reduced motion
   const cardVariants = useMemo(() => {
@@ -56,7 +57,12 @@ export function GameCard({ game, index = 0 }: GameCardProps) {
       animate="visible"
       custom={index}
     >
-      <Link href={`/games/${game.slug}`} className="block group">
+      <Link
+        href={`/games/${game.slug}`}
+        className="block group"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <Card className={cn(
           'overflow-hidden',
           'transition-all duration-200',
@@ -81,7 +87,10 @@ export function GameCard({ game, index = 0 }: GameCardProps) {
             {/* Icon */}
             <motion.div
               className="relative z-10"
-              whileHover={shouldReduceMotion ? undefined : { scale: 1.1, rotate: 5 }}
+              animate={shouldReduceMotion ? undefined : {
+                scale: isHovered ? 1.1 : 1,
+                rotate: isHovered ? 5 : 0,
+              }}
               transition={TRANSITIONS.fast}
             >
               <Icon size={56} className="text-(--color-primary)" strokeWidth={1.5} />

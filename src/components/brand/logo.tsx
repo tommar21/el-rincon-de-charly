@@ -27,7 +27,10 @@ function LogoIcon({ size = 32, className }: { size?: number; className?: string 
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      role="img"
+      aria-label="El Rincón de Charly logo"
     >
+      <title>El Rincón de Charly</title>
       <defs>
         <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="var(--color-primary)" />
@@ -115,24 +118,14 @@ export function Logo({
       )}
 
       {showText && (
-        <div className="flex flex-col min-w-0">
-          <span
-            className={cn(
-              'font-heading font-bold text-(--color-text) leading-tight truncate',
-              sizeConfig.text
-            )}
-          >
-            El Rincon
-          </span>
-          <span
-            className={cn(
-              'text-(--color-text-muted) leading-tight truncate',
-              size === 'sm' ? 'text-xs' : 'text-sm'
-            )}
-          >
-            de Charly
-          </span>
-        </div>
+        <span
+          className={cn(
+            'font-heading font-bold text-(--color-text) leading-tight whitespace-nowrap',
+            sizeConfig.text
+          )}
+        >
+          El Rincón de Charly
+        </span>
       )}
     </div>
   );

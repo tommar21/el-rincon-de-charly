@@ -1,4 +1,13 @@
-export { Sidebar, type GameSection } from './sidebar';
+export { Sidebar } from './sidebar';
 export { MobileSidebar } from './mobile-sidebar';
-export { useSidebarStore } from './use-sidebar-store';
+export {
+  useSidebarStore,
+  useIsCollapsed,
+  useIsHoverExpanded,
+  useCurrentSection,
+  useCurrentCategory,
+  useSidebarActions,
+  useIsSidebarExpanded,
+  type GameSection,
+} from './use-sidebar-store';
 export { default } from './sidebar';

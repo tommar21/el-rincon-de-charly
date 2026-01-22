@@ -1,23 +1,35 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { Gamepad2, Coins, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { GameSection } from './sidebar';
+import { useSidebarStore, type GameSection } from './sidebar';
 
 interface MobileNavProps {
-  currentSection: GameSection;
-  onSectionChange: (section: GameSection) => void;
   onSearchClick: () => void;
   mobileSidebar?: ReactNode;
 }
 
 export function MobileNav({
-  currentSection,
-  onSectionChange,
   onSearchClick,
   mobileSidebar,
 }: MobileNavProps) {
+  const { currentSection, setCurrentSection } = useSidebarStore();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  // Check if we're inside a game page (e.g., /games/tic-tac-toe)
+  const isInGame = pathname?.match(/^\/games\/[^/]+$/) !== null;
+
+  // Handle section change with redirect if inside a game
+  const handleSectionChange = (section: GameSection) => {
+    setCurrentSection(section);
+    if (isInGame) {
+      router.push('/games');
+    }
+  };
+
   return (
     <nav className="bottom-nav safe-bottom" aria-label="Navegacion principal">
       {/* Menu trigger - renders MobileSidebar Sheet */}
@@ -26,7 +38,7 @@ export function MobileNav({
       </div>
 
       <button
-        onClick={() => onSectionChange('arcade')}
+        onClick={() => handleSectionChange('arcade')}
         className={cn('bottom-nav-item', currentSection === 'arcade' && 'active')}
         aria-pressed={currentSection === 'arcade'}
         aria-label="Seccion Arcade"
@@ -36,7 +48,7 @@ export function MobileNav({
       </button>
 
       <button
-        onClick={() => onSectionChange('casino')}
+        onClick={() => handleSectionChange('casino')}
         className={cn('bottom-nav-item', currentSection === 'casino' && 'active')}
         aria-pressed={currentSection === 'casino'}
         aria-label="Seccion Casino"

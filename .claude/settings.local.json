@@ -62,7 +62,10 @@
       "mcp__supabase__get_publishable_keys",
       "Bash(vercel env add:*)",
       "mcp__github__get_me",
-      "mcp__github__search_repositories"
+      "mcp__github__search_repositories",
+      "Bash(git ls-tree:*)",
+      "Bash(git mv:*)",
+      "mcp__supabase-las-recetas__list_tables"
     ]
   }
 }

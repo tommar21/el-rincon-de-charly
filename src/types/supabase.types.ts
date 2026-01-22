@@ -93,6 +93,7 @@ export interface Database {
           board: string[] | null;
           winner_id: string | null;
           is_draw: boolean;
+          rematch_requested_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -106,6 +107,7 @@ export interface Database {
           board?: string[] | null;
           winner_id?: string | null;
           is_draw?: boolean;
+          rematch_requested_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -119,6 +121,7 @@ export interface Database {
           board?: string[] | null;
           winner_id?: string | null;
           is_draw?: boolean;
+          rematch_requested_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };

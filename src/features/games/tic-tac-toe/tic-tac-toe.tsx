@@ -1,14 +1,38 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ModeSelection, GameScreen, OnlineGame } from './components';
 import { useTicTacToe } from './hooks/use-tic-tac-toe';
 import { useOnlineGame } from './hooks/use-online-game';
 import { useStatsStore } from '@/features/profile';
-import { useAuth, AuthModal } from '@/features/auth';
+import { useAuth } from '@/features/auth';
+
+// Dynamic import for modal - reduces initial bundle
+const AuthModal = dynamic(() => import('@/features/auth').then(m => m.AuthModal), { ssr: false });
 import type { AIDifficulty, Player } from '../common/types/game.types';
 import type { GameProps, GameMode } from '../registry/types';
+
+// Loading skeleton component
+function GameLoadingSkeleton() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 gap-8">
+      {/* Title skeleton */}
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-16 h-16 rounded-2xl bg-(--color-surface) animate-pulse" />
+        <div className="w-48 h-8 rounded-lg bg-(--color-surface) animate-pulse" />
+      </div>
+
+      {/* Buttons skeleton */}
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <div className="h-14 rounded-xl bg-(--color-surface) animate-pulse" />
+        <div className="h-14 rounded-xl bg-(--color-surface) animate-pulse" />
+        <div className="h-14 rounded-xl bg-(--color-surface) animate-pulse" />
+      </div>
+    </div>
+  );
+}
 
 interface LocalGameConfig {
   mode: GameMode;
@@ -31,10 +55,19 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
     aiDifficulty: 'medium',
   });
 
+  const [isReady, setIsReady] = useState(false);
+
   const gameStartTimeRef = useRef<number>(Date.now());
   const movesCountRef = useRef<number>(0);
   const { recordGame } = useStatsStore();
   const { user, isAuthenticated, isLoading } = useAuth();
+
+  // Wait for auth to initialize before showing content
+  useEffect(() => {
+    if (!isLoading) {
+      setIsReady(true);
+    }
+  }, [isLoading]);
 
   // URL params for shared room links
   const searchParams = useSearchParams();
@@ -193,6 +226,11 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
     setConfig((prev) => ({ ...prev, ...updates }));
   };
 
+  // Show loading skeleton until auth is ready
+  if (!isReady) {
+    return <GameLoadingSkeleton />;
+  }
+
   // Online game screen
   if (isOnlineMode) {
     return (
@@ -214,6 +252,10 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
         onPlayAgain={handlePlayAgain}
         onRetry={() => onlineGame.findMatch()}
         onBack={onBack}
+        rematchStatus={onlineGame.rematchStatus}
+        onRequestRematch={onlineGame.requestRematch}
+        onAcceptRematch={onlineGame.acceptRematch}
+        onDeclineRematch={onlineGame.declineRematch}
       />
     );
   }

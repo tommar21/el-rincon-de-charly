@@ -1,7 +1,7 @@
 'use client';
 
-import { Sun, Moon, Flame, ChevronUp, Check } from 'lucide-react';
-import { useTheme, type Theme } from '@/components/client/theme-provider';
+import { ChevronUp, Check } from 'lucide-react';
+import { useTheme } from '@/components/client/theme-provider';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,50 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils/cn';
-
-interface ThemeOption {
-  name: Theme;
-  label: string;
-  description: string;
-  icon: typeof Sun;
-  colors: {
-    primary: string;
-    secondary: string;
-  };
-}
-
-const themes: ThemeOption[] = [
-  {
-    name: 'ember',
-    label: 'Ember',
-    description: 'Naranja vibrante',
-    icon: Flame,
-    colors: {
-      primary: '#FF6B35',
-      secondary: '#7C4DFF',
-    },
-  },
-  {
-    name: 'midnight',
-    label: 'Midnight',
-    description: 'Azul profundo',
-    icon: Moon,
-    colors: {
-      primary: '#3B82F6',
-      secondary: '#6366F1',
-    },
-  },
-  {
-    name: 'dawn',
-    label: 'Dawn',
-    description: 'Claro y limpio',
-    icon: Sun,
-    colors: {
-      primary: '#EA580C',
-      secondary: '#7C3AED',
-    },
-  },
-];
+import { AVAILABLE_THEMES, getThemeById } from '@/lib/theme/themes';
 
 interface ThemeSelectorProps {
   className?: string;
@@ -64,7 +21,7 @@ interface ThemeSelectorProps {
 export function ThemeSelector({ className, compact = false }: ThemeSelectorProps) {
   const { theme, setTheme } = useTheme();
 
-  const currentTheme = themes.find((t) => t.name === theme) || themes[0];
+  const currentTheme = getThemeById(theme);
   const CurrentIcon = currentTheme.icon;
 
   return (
@@ -115,14 +72,14 @@ export function ThemeSelector({ className, compact = false }: ThemeSelectorProps
         <DropdownMenuLabel className="text-xs uppercase tracking-wide text-(--color-text-muted)">
           Tema
         </DropdownMenuLabel>
-        {themes.map((t) => {
+        {AVAILABLE_THEMES.map((t) => {
           const Icon = t.icon;
-          const isActive = theme === t.name;
+          const isActive = theme === t.id;
 
           return (
             <DropdownMenuItem
-              key={t.name}
-              onClick={() => setTheme(t.name)}
+              key={t.id}
+              onClick={() => setTheme(t.id)}
               className={cn(
                 'gap-3 py-2.5 cursor-pointer',
                 isActive && 'bg-primary/10'

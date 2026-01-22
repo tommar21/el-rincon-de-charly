@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { getClient } from '@/lib/supabase/client';
 import type { InsertTables, UpdateTables } from '@/types/supabase.types';
 import type { Wallet, WalletTransaction, WalletRow, WalletTransactionRow, TransactionType } from '../types';
+import { validateWalletRow, validateWalletTransactionRows } from '@/lib/validators/database-rows';
 
 // Use Supabase generated types for database operations
 type WalletInsert = InsertTables<'wallets'>;
@@ -54,8 +55,8 @@ function rowToTransaction(row: WalletTransactionRow): WalletTransaction {
   };
 }
 
-// Simple lock to prevent concurrent wallet operations
-let walletOperationLock = false;
+// Track pending operations by unique ID to prevent duplicates
+const pendingOperations = new Set<string>();
 
 // Prevent duplicate loadWallet calls (race condition fix)
 let walletLoadPromise: Promise<void> | null = null;
@@ -67,22 +68,37 @@ const LOCK_CHECK_INTERVAL_MS = 50;
 const MAX_TRANSACTION_RETRIES = 3;
 const RETRY_DELAY_MS = 100;
 
-async function withWalletLock<T>(operation: () => Promise<T>): Promise<T> {
+// Generate unique operation ID
+function generateOperationId(type: string): string {
+  return `${type}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+}
+
+async function withWalletLock<T>(
+  operationType: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  const operationId = generateOperationId(operationType);
   const startTime = Date.now();
 
-  // Wait for any pending operation with timeout
-  while (walletOperationLock) {
+  // Check if same type of operation is already in progress
+  const sameTypeInProgress = Array.from(pendingOperations).some(
+    id => id.startsWith(operationType + ':')
+  );
+
+  // Wait for pending operations with timeout
+  while (pendingOperations.size > 0) {
     if (Date.now() - startTime > MAX_LOCK_WAIT_MS) {
+      console.error('[Wallet] Lock timeout, pending ops:', Array.from(pendingOperations));
       throw new Error('Wallet operation timeout - another operation is taking too long');
     }
     await new Promise(resolve => setTimeout(resolve, LOCK_CHECK_INTERVAL_MS));
   }
 
-  walletOperationLock = true;
+  pendingOperations.add(operationId);
   try {
     return await operation();
   } finally {
-    walletOperationLock = false;
+    pendingOperations.delete(operationId);
   }
 }
 
@@ -103,7 +119,7 @@ async function fetchFreshWallet(supabase: ReturnType<typeof getClient>, walletId
     .eq('id', walletId)
     .single();
 
-  return data ? rowToWallet(data as unknown as WalletRow) : null;
+  return data ? rowToWallet(validateWalletRow(data, 'fetchFreshWallet')) : null;
 }
 
 // Generic wallet transaction executor with retry logic
@@ -282,7 +298,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
                   .single();
 
                 if (existingWallet) {
-                  set({ wallet: rowToWallet(existingWallet as unknown as WalletRow), isLoading: false });
+                  set({ wallet: rowToWallet(validateWalletRow(existingWallet, 'existingWallet')), isLoading: false });
                   return;
                 }
               }
@@ -292,7 +308,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
             }
 
             if (newWallet) {
-              set({ wallet: rowToWallet(newWallet as unknown as WalletRow), isLoading: false });
+              set({ wallet: rowToWallet(validateWalletRow(newWallet, 'newWallet')), isLoading: false });
               return;
             }
 
@@ -303,7 +319,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         }
 
         if (data) {
-          set({ wallet: rowToWallet(data as unknown as WalletRow), isLoading: false });
+          set({ wallet: rowToWallet(validateWalletRow(data, 'loadWallet')), isLoading: false });
         }
       } catch (err) {
         console.error('Error loading wallet:', err);
@@ -335,8 +351,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
       if (data) {
         const hasMore = data.length > limit;
-        const transactions = (data.slice(0, limit) as unknown as WalletTransactionRow[])
-          .map(rowToTransaction);
+        const validatedRows = validateWalletTransactionRows(data.slice(0, limit));
+        const transactions = validatedRows.map(rowToTransaction);
         set({
           transactions,
           hasMoreTransactions: hasMore,
@@ -374,8 +390,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
 
       if (data) {
         const hasMore = data.length > limit;
-        const newTransactions = (data.slice(0, limit) as unknown as WalletTransactionRow[])
-          .map(rowToTransaction);
+        const validatedRows = validateWalletTransactionRows(data.slice(0, limit));
+        const newTransactions = validatedRows.map(rowToTransaction);
         set({
           transactions: [...transactions, ...newTransactions],
           hasMoreTransactions: hasMore,
@@ -389,7 +405,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
 
   placeBet: async (amount, gameSlug, description) => {
-    return withWalletLock(async () => {
+    return withWalletLock('placeBet', async () => {
       const { wallet } = get();
       set({ error: null }); // Clear previous error
       if (!wallet) {
@@ -410,7 +426,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
 
   recordWin: async (amount, gameSlug, description) => {
-    return withWalletLock(async () => {
+    return withWalletLock('recordWin', async () => {
       const { wallet } = get();
       set({ error: null }); // Clear previous error
       if (!wallet) {
@@ -431,7 +447,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
   },
 
   addCredits: async (amount, description) => {
-    return withWalletLock(async () => {
+    return withWalletLock('addCredits', async () => {
       const { wallet } = get();
       set({ error: null }); // Clear previous error
       if (!wallet) {

@@ -13,6 +13,8 @@ interface UseOnlineGameOptions {
   onGameEnd?: (winnerId: string | null, isDraw: boolean, mySymbol: 'X' | 'O') => void;
 }
 
+export type RematchStatus = 'none' | 'requested' | 'received' | 'accepted';
+
 interface UseOnlineGameReturn {
   status: OnlineGameStatus;
   room: GameRoomWithPlayers | null;
@@ -27,6 +29,11 @@ interface UseOnlineGameReturn {
   makeMove: (cellIndex: number) => Promise<boolean>;
   leaveGame: () => Promise<void>;
   error: string | null;
+  // Rematch functionality
+  rematchStatus: RematchStatus;
+  requestRematch: () => Promise<void>;
+  acceptRematch: () => Promise<void>;
+  declineRematch: () => Promise<void>;
 }
 
 export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseOnlineGameReturn {
@@ -36,6 +43,7 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
   const [winner, setWinner] = useState<WinResult | null>(null);
   const [isDraw, setIsDraw] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rematchStatus, setRematchStatus] = useState<RematchStatus>('none');
 
   const unsubscribeRef = useRef<(() => void) | null>(null);
   // Use refs to access latest values in callbacks without causing re-subscriptions
@@ -74,7 +82,20 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
   // Manejar actualizaciones de la sala - uses refs to avoid dependency changes
   const handleRoomUpdate = useCallback((updatedRoom: GameRoom) => {
     console.log('[OnlineGame] handleRoomUpdate called:', updatedRoom.status, 'current status:', statusRef.current);
-    setRoom(prev => prev ? { ...prev, ...updatedRoom } : null);
+
+    // Validate timestamp to prevent stale updates from overwriting newer ones
+    setRoom(prev => {
+      if (prev && updatedRoom.updated_at) {
+        const prevTime = new Date(prev.updated_at).getTime();
+        const newTime = new Date(updatedRoom.updated_at).getTime();
+        if (newTime < prevTime) {
+          console.log('[OnlineGame] Ignoring stale update:', newTime, '<', prevTime);
+          return prev; // Ignore stale updates
+        }
+      }
+      return prev ? { ...prev, ...updatedRoom } : null;
+    });
+
     const newBoard = dbBoardToBoardState(updatedRoom.board as string[]);
     setBoard(newBoard);
 
@@ -84,21 +105,43 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     }
 
     if (updatedRoom.status === 'finished') {
-      setStatus('finished');
       // Determine mySymbol for callback (X for player1, O for player2)
       // Use updatedRoom.player1_id since room from closure might be stale
       const symbol: 'X' | 'O' = updatedRoom.player1_id === userIdRef.current ? 'X' : 'O';
 
+      // First update board and winner to show the last move
       if (updatedRoom.is_draw) {
         setIsDraw(true);
-        onGameEndRef.current?.(null, true, symbol);
       } else if (updatedRoom.winner_id) {
-        // Encontrar línea ganadora
+        // Encontrar línea ganadora - siempre calcular y setear
         const winResult = checkWinner(newBoard);
-        if (winResult) {
-          setWinner(winResult);
+        // Siempre setear winner para mostrar correctamente quién ganó
+        // winResult contiene { winner: 'X'|'O', line: number[] }
+        setWinner(winResult);
+      }
+
+      // Delay status change to 'finished' to allow:
+      // - Cell entry animation (~300ms)
+      // - Winning line animation (~500ms)
+      // This prevents the game-over UI from appearing before animations complete
+      setTimeout(() => {
+        setStatus('finished');
+        if (updatedRoom.is_draw) {
+          onGameEndRef.current?.(null, true, symbol);
+        } else if (updatedRoom.winner_id) {
+          onGameEndRef.current?.(updatedRoom.winner_id, false, symbol);
         }
-        onGameEndRef.current?.(updatedRoom.winner_id, false, symbol);
+      }, 800);
+
+      // Manejar estado de rematch (can be done immediately)
+      if (updatedRoom.rematch_requested_by) {
+        if (updatedRoom.rematch_requested_by === userIdRef.current) {
+          setRematchStatus('requested');
+        } else {
+          setRematchStatus('received');
+        }
+      } else {
+        setRematchStatus('none');
       }
     }
   }, []); // No dependencies - uses refs for latest values
@@ -339,7 +382,86 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     setIsDraw(false);
     setStatus('idle');
     setError(null);
+    setRematchStatus('none');
   }, [room, userId, cleanupSubscription]);
+
+  // Helper para iniciar nueva partida de rematch
+  const startRematchGame = useCallback(async (newRoom: GameRoom) => {
+    cleanupSubscription();
+
+    // Obtener sala con datos de jugadores
+    const roomWithPlayers = await gameRoomService.getRoom(newRoom.id);
+
+    if (roomWithPlayers) {
+      setRoom(roomWithPlayers);
+    } else {
+      setRoom({
+        ...newRoom,
+        player1: undefined,
+        player2: undefined,
+      } as GameRoomWithPlayers);
+    }
+
+    setBoard(dbBoardToBoardState(newRoom.board as string[]));
+    setWinner(null);
+    setIsDraw(false);
+    setStatus('playing');
+    setError(null);
+    setRematchStatus('none');
+
+    // Suscribirse a la nueva sala
+    unsubscribeRef.current = gameRoomService.subscribeToRoom(
+      newRoom.id,
+      handleRoomUpdate
+    );
+  }, [cleanupSubscription, handleRoomUpdate]);
+
+  // Solicitar revancha
+  const requestRematch = useCallback(async () => {
+    if (!room || status !== 'finished') {
+      console.error('[OnlineGame] requestRematch: invalid state');
+      return;
+    }
+
+    console.log('[OnlineGame] Requesting rematch for room:', room.id);
+    const success = await gameRoomService.requestRematch(room.id, userId);
+
+    if (success) {
+      setRematchStatus('requested');
+    } else {
+      setError('Error al solicitar revancha');
+    }
+  }, [room, status, userId]);
+
+  // Aceptar revancha
+  const acceptRematch = useCallback(async () => {
+    if (!room || status !== 'finished' || rematchStatus !== 'received') {
+      console.error('[OnlineGame] acceptRematch: invalid state');
+      return;
+    }
+
+    console.log('[OnlineGame] Accepting rematch for room:', room.id);
+    const newRoom = await gameRoomService.acceptRematch(room.id, userId);
+
+    if (newRoom) {
+      setRematchStatus('accepted');
+      await startRematchGame(newRoom);
+    } else {
+      setError('Error al aceptar revancha');
+    }
+  }, [room, status, rematchStatus, userId, startRematchGame]);
+
+  // Rechazar revancha
+  const declineRematch = useCallback(async () => {
+    if (!room || status !== 'finished') {
+      console.error('[OnlineGame] declineRematch: invalid state');
+      return;
+    }
+
+    console.log('[OnlineGame] Declining rematch for room:', room.id);
+    await gameRoomService.declineRematch(room.id);
+    setRematchStatus('none');
+  }, [room, status]);
 
   // Limpiar al desmontar
   useEffect(() => {
@@ -410,6 +532,11 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     makeMove,
     leaveGame,
     error,
+    // Rematch
+    rematchStatus,
+    requestRematch,
+    acceptRematch,
+    declineRematch,
   };
 }
 
