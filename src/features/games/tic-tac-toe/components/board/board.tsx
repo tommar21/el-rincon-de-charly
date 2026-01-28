@@ -39,10 +39,11 @@ export function Board({
     <motion.div
       data-testid="board"
       className={cn(
-        'relative grid grid-cols-3 gap-2 sm:gap-3 p-3 sm:p-4',
+        'relative grid grid-cols-3 gap-2 sm:gap-3 p-2 sm:p-4',
         'bg-(--color-surface)/50 rounded-xl',
         'backdrop-blur-sm',
-        'w-[min(90vw,340px)] sm:w-[360px]',
+        'w-[min(85vw,340px)] sm:w-[360px]',
+        'landscape:w-[min(45vh,280px)] landscape:gap-1.5 landscape:p-2',
         className
       )}
       variants={containerVariants}

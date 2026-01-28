@@ -6,6 +6,8 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant landscape (@media (orientation: landscape));
+@custom-variant portrait (@media (orientation: portrait));
 
 /* Tailwind v4 theme customization */
 @theme {
@@ -387,6 +389,37 @@ body {
   }
 }
 
+/* Landscape mobile: reduce bottom nav space */
+@media (max-width: 767px) and (orientation: landscape) {
+  .main-content {
+    padding-bottom: 3.5rem;
+  }
+}
+
+/* ============================================
+   GAME-SPECIFIC RESPONSIVE UTILITIES
+   ============================================ */
+/* Container that accounts for bottom nav - allows scroll when needed */
+.game-container {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
+}
+
+@media (max-width: 767px) {
+  .game-container {
+    min-height: calc(100dvh - 4rem); /* Subtract bottom nav */
+    padding-bottom: 1rem;
+  }
+}
+
+@media (max-width: 767px) and (orientation: landscape) {
+  .game-container {
+    min-height: auto; /* Allow natural height */
+    padding: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+}
+
 /* ============================================
    BOTTOM NAVIGATION (Mobile)
    ============================================ */
@@ -427,6 +460,23 @@ body {
 .bottom-nav-item.active {
   color: var(--color-primary);
   background-color: var(--color-surface-hover);
+}
+
+/* Landscape adjustments for bottom nav */
+@media (max-width: 767px) and (orientation: landscape) {
+  .bottom-nav {
+    padding: 0.25rem 0.5rem;
+  }
+
+  .bottom-nav-item {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.65rem;
+  }
+
+  .bottom-nav-item svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 /* ============================================

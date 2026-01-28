@@ -67,14 +67,14 @@ export function ModeSelection({
   onPlayOnline,
 }: ModeSelectionProps) {
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen p-6">
+    <div className="game-container relative flex flex-col items-center justify-center p-4 sm:p-6 landscape:p-2">
       {/* Back to Hub button - positioned relative to container, not viewport */}
       {onBack && (
         <Button
           onClick={onBack}
           variant="ghost"
           size="sm"
-          className="absolute top-4 left-4 gap-2 z-10"
+          className="absolute top-2 left-2 sm:top-4 sm:left-4 gap-2 z-10"
         >
           <ArrowLeft size={18} />
           <span className="hidden sm:inline">Volver</span>
@@ -82,12 +82,12 @@ export function ModeSelection({
       )}
 
       <motion.div
-        className="text-center mb-10"
+        className="text-center mb-6 sm:mb-10 landscape:mb-3"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <span className="text-5xl block mb-3">#️⃣</span>
-        <h1 className="text-3xl sm:text-4xl font-heading font-bold text-(--color-text)">
+        <span className="text-4xl sm:text-5xl landscape:text-3xl block mb-2 sm:mb-3 landscape:mb-1">#️⃣</span>
+        <h1 className="text-2xl sm:text-4xl landscape:text-xl font-heading font-bold text-(--color-text)">
           Tic Tac Toe
         </h1>
       </motion.div>
@@ -96,7 +96,7 @@ export function ModeSelection({
         {!showAIConfig ? (
           <motion.div
             key="mode-select"
-            className="flex flex-col gap-3 w-full max-w-xs"
+            className="flex flex-col gap-2 sm:gap-3 w-full max-w-xs landscape:max-w-sm"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
@@ -107,7 +107,7 @@ export function ModeSelection({
               onClick={onShowAIConfig}
               variant="primary"
               size="lg"
-              className="w-full gap-2.5 py-5"
+              className="w-full gap-2.5 py-4 sm:py-5 landscape:py-3"
             >
               <Bot size={20} />
               Jugar vs IA
@@ -118,7 +118,7 @@ export function ModeSelection({
               onClick={() => onStartGame('local')}
               variant="secondary"
               size="lg"
-              className="w-full gap-2.5 py-5"
+              className="w-full gap-2.5 py-4 sm:py-5 landscape:py-3"
             >
               <Users size={20} />
               2 Jugadores
@@ -129,7 +129,7 @@ export function ModeSelection({
               onClick={onPlayOnline}
               variant={isAuthenticated ? 'success' : 'outline'}
               size="lg"
-              className="w-full gap-2.5 py-5"
+              className="w-full gap-2.5 py-4 sm:py-5 landscape:py-3"
             >
               <Globe size={20} />
               {isAuthenticated ? 'Jugar Online' : 'Online (Inicia sesión)'}
@@ -138,7 +138,7 @@ export function ModeSelection({
         ) : (
           <motion.div
             key="ai-config"
-            className="flex flex-col gap-4 w-full max-w-xs"
+            className="flex flex-col gap-3 sm:gap-4 landscape:gap-2 w-full max-w-xs landscape:max-w-sm"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}

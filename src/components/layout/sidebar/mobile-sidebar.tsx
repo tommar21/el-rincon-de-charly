@@ -6,10 +6,6 @@ import {
   Gamepad2,
   Coins,
   Search,
-  Grid3X3,
-  Spade,
-  Puzzle,
-  Dices,
   Menu,
 } from 'lucide-react';
 import { Logo } from '@/components/brand/logo';
@@ -27,30 +23,12 @@ import {
 import { cn } from '@/lib/utils';
 import { useSidebarStore, type GameSection } from './use-sidebar-store';
 
-interface Category {
-  id: string;
-  label: string;
-  icon: typeof Grid3X3;
-}
-
-const categories: Category[] = [
-  { id: 'board', label: 'Tablero', icon: Grid3X3 },
-  { id: 'card', label: 'Cartas', icon: Spade },
-  { id: 'puzzle', label: 'Puzzle', icon: Puzzle },
-  { id: 'casino', label: 'Casino', icon: Dices },
-];
-
 interface MobileSidebarProps {
   onSearchClick?: () => void;
 }
 
 export function MobileSidebar({ onSearchClick }: MobileSidebarProps) {
-  const {
-    currentSection,
-    setCurrentSection,
-    currentCategory,
-    setCurrentCategory,
-  } = useSidebarStore();
+  const { currentSection, setCurrentSection } = useSidebarStore();
 
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -59,10 +37,6 @@ export function MobileSidebar({ onSearchClick }: MobileSidebarProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const handleCategoryClick = (categoryId: string) => {
-    setCurrentCategory(currentCategory === categoryId ? undefined : categoryId);
-  };
 
   const handleSectionChange = (section: GameSection) => {
     setCurrentSection(section);
@@ -135,41 +109,6 @@ export function MobileSidebar({ onSearchClick }: MobileSidebarProps) {
                 Casino
               </ToggleGroupItem>
             </ToggleGroup>
-          </div>
-
-          {/* Categories */}
-          <div className="p-4 border-b border-(--sidebar-border)">
-            <p className="text-xs font-semibold uppercase tracking-wide text-(--color-text-subtle) mb-3 px-1">
-              Categorias
-            </p>
-            <nav className="flex flex-col gap-1">
-              {categories.map((category) => {
-                const Icon = category.icon;
-                const isActive = currentCategory === category.id;
-
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => {
-                      handleCategoryClick(category.id);
-                      setIsOpen(false);
-                    }}
-                    className={cn(
-                      'flex items-center gap-3 w-full rounded-lg transition-all duration-200',
-                      'px-3 py-2.5 text-sm font-medium',
-                      'hover:bg-(--color-surface-hover)',
-                      isActive && [
-                        'bg-(--color-primary)/10 text-(--color-primary)',
-                      ],
-                      !isActive && 'text-(--color-text-muted)'
-                    )}
-                  >
-                    <Icon size={18} className="shrink-0" />
-                    <span>{category.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
           </div>
 
           {/* Search */}

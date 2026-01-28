@@ -51,7 +51,7 @@ export function Cell({
         'bg-(--color-surface) rounded-xl',
         'transition-all duration-300',
         'focus:outline-none focus:ring-2 focus:ring-(--color-primary)',
-        'min-h-[80px] sm:min-h-[100px]',
+        'min-h-[70px] sm:min-h-[100px] landscape:min-h-0',
         isClickable && [
           'cursor-pointer',
           'hover:bg-(--color-surface-hover)',

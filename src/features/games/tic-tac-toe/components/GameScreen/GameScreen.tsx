@@ -34,14 +34,14 @@ export function GameScreen({
   onBackToMenu,
 }: GameScreenProps) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6">
+    <div className="game-container flex flex-col items-center justify-center p-4 sm:p-6 landscape:p-2 landscape:gap-2">
       {/* Header */}
       <motion.div
-        className="mb-8 text-center"
+        className="mb-4 sm:mb-8 landscape:mb-2 text-center"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-3xl sm:text-4xl font-heading font-bold text-(--color-text) mb-4">
+        <h1 className="text-2xl sm:text-4xl landscape:text-xl font-heading font-bold text-(--color-text) mb-2 sm:mb-4 landscape:mb-1">
           Tic Tac Toe
         </h1>
 
@@ -63,7 +63,7 @@ export function GameScreen({
                 }
               }}
               exit={{ opacity: 0, scale: 0.8 }}
-              className="text-2xl sm:text-3xl font-bold"
+              className="text-xl sm:text-3xl landscape:text-lg font-bold"
             >
               {winner ? (
                 <motion.span
@@ -115,7 +115,7 @@ export function GameScreen({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex items-center justify-center gap-2 text-lg"
+              className="flex items-center justify-center gap-2 text-base sm:text-lg landscape:text-sm"
             >
               {isAIThinking ? (
                 <>
@@ -159,7 +159,7 @@ export function GameScreen({
 
       {/* Controls */}
       <motion.div
-        className="mt-8 flex gap-4"
+        className="mt-4 sm:mt-8 landscape:mt-2 flex gap-2 sm:gap-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}

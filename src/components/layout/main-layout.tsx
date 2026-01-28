@@ -10,10 +10,25 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
+// Check if we're on mobile (client-side only)
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+}
+
 export function MainLayout({ children }: MainLayoutProps) {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const isCollapsed = useIsCollapsed();
   const [mounted, setMounted] = useState(false);
+  const isMobile = useIsMobile();
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -25,9 +40,12 @@ export function MainLayout({ children }: MainLayoutProps) {
   };
 
   // Calculate margin based on collapsed state (only on desktop)
-  const mainMargin = mounted && isCollapsed
-    ? 'var(--sidebar-collapsed-width)'
-    : 'var(--sidebar-width)';
+  // On mobile, margin should be 0
+  const mainMargin = isMobile
+    ? '0'
+    : mounted && isCollapsed
+      ? 'var(--sidebar-collapsed-width)'
+      : 'var(--sidebar-width)';
 
   return (
     <div className="relative min-h-screen bg-(--color-background)">
@@ -37,7 +55,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Main Content */}
       <main
         className="main-content min-h-screen transition-[margin] duration-200 ease-out"
-        style={{ marginLeft: mounted ? mainMargin : 'var(--sidebar-width)' }}
+        style={{ marginLeft: mainMargin }}
       >
         <PageTransition>{children}</PageTransition>
       </main>

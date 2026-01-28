@@ -55,25 +55,25 @@ export function GamesHubClient({ games }: GamesHubClientProps) {
   const SectionIcon = config.icon;
 
   return (
-    <div className="flex flex-col min-h-screen px-6 md:px-8 lg:px-12 pt-10 pb-8 max-w-6xl mx-auto w-full">
+    <div className="flex flex-col min-h-screen px-4 sm:px-6 md:px-8 lg:px-12 pt-6 sm:pt-10 pb-6 sm:pb-8 landscape:pt-4 landscape:pb-4 max-w-6xl mx-auto w-full">
       {/* Header */}
-      <header className="mb-10">
-        <div className="flex items-center gap-3 mb-2">
-          <div className={`w-12 h-12 rounded-xl ${config.bgColor} flex items-center justify-center`}>
-            <SectionIcon size={24} className={config.iconColor} />
+      <header className="mb-6 sm:mb-10 landscape:mb-4">
+        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 landscape:w-8 landscape:h-8 rounded-xl ${config.bgColor} flex items-center justify-center`}>
+            <SectionIcon size={20} className={`${config.iconColor} sm:w-6 sm:h-6`} />
           </div>
-          <h1 className="font-heading text-4xl font-bold text-(--color-text)">
+          <h1 className="font-heading text-2xl sm:text-4xl landscape:text-xl font-bold text-(--color-text)">
             {config.title}
           </h1>
         </div>
-        <p className="text-lg text-(--color-text-muted)">
+        <p className="text-sm sm:text-lg landscape:text-xs text-(--color-text-muted)">
           {config.description}
         </p>
       </header>
 
       {/* Games Grid */}
       {filteredGames.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 lg:gap-7">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 landscape:grid-cols-2 gap-4 sm:gap-5 md:gap-6 lg:gap-7 landscape:gap-3">
           {filteredGames.map((game, index) => (
             <GameCard key={game.slug} game={game} index={index} />
           ))}
