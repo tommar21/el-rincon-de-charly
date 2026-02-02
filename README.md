@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# El Rincón de Charly
 
-## Getting Started
+Plataforma de juegos online multijugador con autenticación, matchmaking en tiempo real y sistema de wallet.
 
-First, run the development server:
+**[Jugar ahora](https://el-rincon-de-charly.vercel.app)**
+
+## Features
+
+### Juegos
+- **Tic Tac Toe** - Con 4 niveles de dificultad de IA (fácil a imposible)
+- Modos: vs IA, local (2 jugadores), online multijugador
+- Más juegos próximamente (Connect 4, Ajedrez, Damas)
+
+### Multijugador Online
+- Matchmaking automático
+- Salas privadas con link de invitación
+- Realtime con WebSocket (Supabase)
+- Reconexión automática
+- Sistema de revancha
+
+### Usuario
+- Autenticación con email/OAuth
+- Perfil con estadísticas
+- Leaderboard global
+- Sistema de wallet
+
+### UX
+- 3 temas: Ember, Midnight, Neon
+- Diseño responsive (mobile/tablet/desktop)
+- Command palette (Ctrl+K)
+- Animaciones con Framer Motion
+
+## Stack
+
+| Categoría | Tecnología |
+|-----------|------------|
+| Framework | Next.js 16, React 19, TypeScript |
+| Styling | Tailwind CSS 4, Radix UI |
+| Backend | Supabase (PostgreSQL, Auth, Realtime) |
+| State | Zustand |
+| Animations | Framer Motion |
+
+## Desarrollo
 
 ```bash
+# Instalar dependencias
+npm install
+
+# Variables de entorno
+cp .env.example .env.local
+# Configurar SUPABASE_URL y SUPABASE_ANON_KEY
+
+# Iniciar servidor de desarrollo
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Estructura
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+├── app/           # Rutas (App Router)
+├── features/      # Features por dominio (auth, games, wallet, profile)
+├── components/    # Componentes UI reutilizables
+├── stores/        # Zustand stores
+├── lib/           # Utilidades y configuración
+└── types/         # Tipos TypeScript
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+supabase/
+└── migrations/    # Migraciones SQL
+```
 
-## Learn More
+## Licencia
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
