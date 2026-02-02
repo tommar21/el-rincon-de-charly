@@ -9,7 +9,6 @@ import {
   Menu,
 } from 'lucide-react';
 import { Logo } from '@/components/brand/logo';
-import { ThemeSelector } from '@/features/settings';
 import { UserMenu } from '@/features/auth';
 import { Button } from '@/components/ui/button';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -92,7 +91,11 @@ export function MobileSidebar({ onSearchClick }: MobileSidebarProps) {
                 value="arcade"
                 className={cn(
                   'flex-1 gap-2 data-[state=on]:bg-(--color-primary) data-[state=on]:text-white',
-                  'rounded-md px-3 py-2 text-sm font-medium'
+                  'rounded-md px-3 py-2 text-sm font-medium',
+                  'transition-all duration-200 ease-out',
+                  'hover:bg-(--color-primary)/20 hover:scale-[1.02]',
+                  'data-[state=on]:shadow-lg data-[state=on]:shadow-(--color-primary)/25',
+                  'active:scale-95'
                 )}
               >
                 <Gamepad2 size={16} />
@@ -102,7 +105,11 @@ export function MobileSidebar({ onSearchClick }: MobileSidebarProps) {
                 value="casino"
                 className={cn(
                   'flex-1 gap-2 data-[state=on]:bg-(--color-primary) data-[state=on]:text-white',
-                  'rounded-md px-3 py-2 text-sm font-medium'
+                  'rounded-md px-3 py-2 text-sm font-medium',
+                  'transition-all duration-200 ease-out',
+                  'hover:bg-(--color-primary)/20 hover:scale-[1.02]',
+                  'data-[state=on]:shadow-lg data-[state=on]:shadow-(--color-primary)/25',
+                  'active:scale-95'
                 )}
               >
                 <Coins size={16} />
@@ -133,11 +140,8 @@ export function MobileSidebar({ onSearchClick }: MobileSidebarProps) {
           <div className="flex-1" />
 
           {/* Footer */}
-          <div className="p-4 border-t border-(--sidebar-border) space-y-3">
-            <div className="flex items-center gap-2">
-              <ThemeSelector className="flex-1" />
-              <UserMenu />
-            </div>
+          <div className="p-4 border-t border-(--sidebar-border)">
+            <UserMenu className="w-full" />
           </div>
         </div>
       </SheetContent>

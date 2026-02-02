@@ -19,6 +19,8 @@ import {
   ModalContent,
   ModalHeader,
   ModalBody,
+  ModalTitle,
+  ModalDescription,
 } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 
@@ -85,7 +87,7 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
 
   return (
     <Modal open={isOpen} onClose={onClose}>
-      <ModalContent size="default" ariaLabel="Mi Billetera">
+      <ModalContent size="default">
         {/* Header */}
         <ModalHeader>
           <div className="flex items-center gap-3">
@@ -93,12 +95,12 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
               <Coins className="text-(--color-warning)" size={20} />
             </div>
             <div>
-              <h2 className="font-heading font-bold text-lg text-(--color-text)">
+              <ModalTitle className="font-heading font-bold text-lg text-(--color-text)">
                 Mi Billetera
-              </h2>
-              <p className="text-sm text-(--color-text-muted)">
+              </ModalTitle>
+              <ModalDescription className="text-sm text-(--color-text-muted)">
                 Creditos virtuales
-              </p>
+              </ModalDescription>
             </div>
           </div>
         </ModalHeader>
@@ -163,11 +165,9 @@ export function WalletModal({ isOpen, onClose }: WalletModalProps) {
                 onClick={handleAddCredits}
                 disabled={isAddingCredits}
                 loading={isAddingCredits}
+                icon={<Plus size={20} />}
               >
-                <Plus size={20} />
-                {isAddingCredits
-                  ? 'Agregando...'
-                  : 'Obtener 1000 creditos gratis'}
+                Obtener 1000 creditos gratis
               </Button>
 
               <p className="text-xs text-center text-(--color-text-subtle)">

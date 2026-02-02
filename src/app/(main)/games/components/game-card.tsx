@@ -56,6 +56,7 @@ export function GameCard({ game, index = 0 }: GameCardProps) {
       initial="hidden"
       animate="visible"
       custom={index}
+      className="w-full max-w-[280px]"
     >
       <Link
         href={`/games/${game.slug}`}

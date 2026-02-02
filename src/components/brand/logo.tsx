@@ -17,7 +17,7 @@ const sizes = {
   lg: { icon: 40, text: 'text-lg' },
 };
 
-// Stylized dice icon with "C" integrated
+// Stylized dice icon with "C" integrated - modernized version
 function LogoIcon({ size = 32, className }: { size?: number; className?: string }) {
   return (
     <svg
@@ -32,17 +32,33 @@ function LogoIcon({ size = 32, className }: { size?: number; className?: string 
     >
       <title>El Rincón de Charly</title>
       <defs>
+        {/* Main gradient with enhanced colors */}
         <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="var(--color-primary)" />
+          <stop offset="50%" stopColor="var(--color-primary)" />
           <stop offset="100%" stopColor="var(--color-secondary)" />
         </linearGradient>
-        <linearGradient id="logo-gradient-light" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.2" />
-          <stop offset="100%" stopColor="var(--color-secondary)" stopOpacity="0.2" />
+        {/* Inner glow effect */}
+        <linearGradient id="logo-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="white" stopOpacity="0.25" />
+          <stop offset="50%" stopColor="white" stopOpacity="0.1" />
+          <stop offset="100%" stopColor="white" stopOpacity="0" />
         </linearGradient>
+        {/* Shadow for depth */}
+        <filter id="logo-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="black" floodOpacity="0.3" />
+        </filter>
+        {/* Dot glow */}
+        <filter id="dot-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="1" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
 
-      {/* Background rounded square (dice shape) */}
+      {/* Background rounded square (dice shape) with shadow */}
       <rect
         x="4"
         y="4"
@@ -50,36 +66,47 @@ function LogoIcon({ size = 32, className }: { size?: number; className?: string 
         height="40"
         rx="10"
         fill="url(#logo-gradient)"
+        filter="url(#logo-shadow)"
       />
 
-      {/* Inner highlight */}
+      {/* Inner glow overlay */}
       <rect
-        x="6"
-        y="6"
-        width="36"
-        height="36"
-        rx="8"
-        fill="url(#logo-gradient-light)"
+        x="4"
+        y="4"
+        width="40"
+        height="40"
+        rx="10"
+        fill="url(#logo-glow)"
       />
 
-      {/* Dice dots - stylized as "C" shape */}
-      {/* Top left dot */}
-      <circle cx="15" cy="15" r="3.5" fill="white" opacity="0.95" />
+      {/* Subtle border for definition */}
+      <rect
+        x="4.5"
+        y="4.5"
+        width="39"
+        height="39"
+        rx="9.5"
+        fill="none"
+        stroke="white"
+        strokeOpacity="0.1"
+        strokeWidth="1"
+      />
 
-      {/* Middle left dot */}
-      <circle cx="15" cy="24" r="3.5" fill="white" opacity="0.95" />
-
-      {/* Bottom left dot */}
-      <circle cx="15" cy="33" r="3.5" fill="white" opacity="0.95" />
-
-      {/* Top right dot */}
-      <circle cx="33" cy="15" r="3.5" fill="white" opacity="0.95" />
-
-      {/* Bottom right dot */}
-      <circle cx="33" cy="33" r="3.5" fill="white" opacity="0.95" />
-
-      {/* Center accent dot */}
-      <circle cx="24" cy="24" r="4" fill="white" opacity="0.9" />
+      {/* Dice dots - stylized as "C" shape with glow */}
+      <g filter="url(#dot-glow)">
+        {/* Top left dot */}
+        <circle cx="15" cy="15" r="3.5" fill="white" />
+        {/* Middle left dot */}
+        <circle cx="15" cy="24" r="3.5" fill="white" />
+        {/* Bottom left dot */}
+        <circle cx="15" cy="33" r="3.5" fill="white" />
+        {/* Top right dot */}
+        <circle cx="33" cy="15" r="3.5" fill="white" />
+        {/* Bottom right dot */}
+        <circle cx="33" cy="33" r="3.5" fill="white" />
+        {/* Center accent dot - slightly larger */}
+        <circle cx="24" cy="24" r="4.5" fill="white" />
+      </g>
     </svg>
   );
 }

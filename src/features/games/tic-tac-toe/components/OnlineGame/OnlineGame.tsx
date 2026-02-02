@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, ArrowLeft, Globe, Loader2, LogOut, Copy, Check, X } from 'lucide-react';
+import { RotateCcw, ArrowLeft, Globe, Loader2, LogOut, Copy, Check, X, Wifi, WifiOff } from 'lucide-react';
 import { Board } from '../board';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/modal';
 import type { BoardState, WinResult } from '../../types';
 import type { OnlineGameStatus, RematchStatus } from '../../hooks/use-online-game';
+import type { ConnectionStatus } from '../../../common/services/game-room-service';
 
 interface OnlineGameProps {
   status: OnlineGameStatus;
@@ -28,6 +29,7 @@ interface OnlineGameProps {
   error: string | null;
   showLeaveConfirm: boolean;
   roomId: string | null;
+  connectionStatus: ConnectionStatus;
   onCellClick: (index: number) => Promise<boolean>;
   onLeave: () => void;
   onConfirmLeave: () => void;
@@ -53,6 +55,7 @@ export function OnlineGame({
   error,
   showLeaveConfirm,
   roomId,
+  connectionStatus,
   onCellClick,
   onLeave,
   onConfirmLeave,
@@ -80,6 +83,14 @@ export function OnlineGame({
     }
   };
 
+  // Connection status indicator config
+  const connectionIndicator = {
+    connected: { icon: Wifi, color: 'text-(--color-success)', label: 'Conectado' },
+    connecting: { icon: Wifi, color: 'text-(--color-warning) animate-pulse', label: 'Conectando...' },
+    reconnecting: { icon: Wifi, color: 'text-(--color-warning) animate-pulse', label: 'Reconectando...' },
+    disconnected: { icon: WifiOff, color: 'text-(--color-error)', label: 'Desconectado' },
+  }[connectionStatus];
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6">
       {/* Back to Hub button */}
@@ -93,6 +104,17 @@ export function OnlineGame({
           <ArrowLeft size={18} />
           <span className="hidden sm:inline">Volver</span>
         </Button>
+      )}
+
+      {/* Connection status indicator */}
+      {(status === 'playing' || status === 'waiting') && (
+        <div
+          className={`absolute top-4 right-4 flex items-center gap-1.5 px-2 py-1 rounded-full bg-(--color-surface) border border-(--color-border) ${connectionIndicator.color}`}
+          title={connectionIndicator.label}
+        >
+          <connectionIndicator.icon size={14} />
+          <span className="text-xs hidden sm:inline">{connectionIndicator.label}</span>
+        </div>
       )}
 
       <motion.div

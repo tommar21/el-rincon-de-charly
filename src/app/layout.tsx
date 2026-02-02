@@ -51,6 +51,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        {/* Apply theme before hydration to prevent flash of wrong theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var theme = localStorage.getItem('el-rincon-theme');
+                if (!theme || !['ember', 'midnight', 'neon'].includes(theme)) {
+                  theme = 'ember';
+                }
+                document.documentElement.setAttribute('data-theme', theme);
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="antialiased">
         <Providers>{children}</Providers>
       </body>

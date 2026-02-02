@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { gameRoomService, type GameRoom, type GameRoomWithPlayers } from '../../common/services/game-room-service';
+import { gameRoomService, type GameRoom, type GameRoomWithPlayers, type ConnectionStatus } from '../../common/services/game-room-service';
 import { checkWinner, checkDraw, createInitialBoard } from '../engine/game-logic';
 import { dbBoardToBoardState, boardStateToDbBoard } from '../../common/utils';
 import type { BoardState, WinResult } from '../types';
@@ -25,10 +25,13 @@ interface UseOnlineGameReturn {
   isDraw: boolean;
   opponentName: string | null;
   findMatch: () => Promise<void>;
+  createPrivateRoom: () => Promise<void>;
   joinRoom: (roomId: string) => Promise<void>;
   makeMove: (cellIndex: number) => Promise<boolean>;
   leaveGame: () => Promise<void>;
   error: string | null;
+  // Connection status
+  connectionStatus: ConnectionStatus;
   // Rematch functionality
   rematchStatus: RematchStatus;
   requestRematch: () => Promise<void>;
@@ -44,6 +47,7 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
   const [isDraw, setIsDraw] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rematchStatus, setRematchStatus] = useState<RematchStatus>('none');
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
 
   const unsubscribeRef = useRef<(() => void) | null>(null);
   // Use refs to access latest values in callbacks without causing re-subscriptions
@@ -53,6 +57,8 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
   statusRef.current = status;
   const userIdRef = useRef(userId);
   userIdRef.current = userId;
+  const rematchStatusRef = useRef(rematchStatus);
+  rematchStatusRef.current = rematchStatus;
 
   // Determinar mi símbolo (X para player1, O para player2)
   const mySymbol = room
@@ -77,6 +83,19 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
       unsubscribeRef.current();
       unsubscribeRef.current = null;
     }
+    setConnectionStatus('disconnected');
+  }, []);
+
+  // Handler para cambios de estado de conexión
+  const handleConnectionStatus = useCallback((newStatus: ConnectionStatus) => {
+    console.log('[OnlineGame] Connection status:', newStatus);
+    setConnectionStatus(newStatus);
+  }, []);
+
+  // Handler para errores de suscripción
+  const handleSubscriptionError = useCallback((err: Error) => {
+    console.error('[OnlineGame] Subscription error:', err);
+    setError('Error de conexión. Reconectando...');
   }, []);
 
   // Manejar actualizaciones de la sala - uses refs to avoid dependency changes
@@ -121,8 +140,8 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
       }
 
       // Delay status change to 'finished' to allow:
-      // - Cell entry animation (~300ms)
-      // - Winning line animation (~500ms)
+      // - Cell entry animation (~400ms spring)
+      // - Winning line animation (~600ms)
       // This prevents the game-over UI from appearing before animations complete
       setTimeout(() => {
         setStatus('finished');
@@ -131,9 +150,48 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
         } else if (updatedRoom.winner_id) {
           onGameEndRef.current?.(updatedRoom.winner_id, false, symbol);
         }
-      }, 800);
+      }, 1200);
 
-      // Manejar estado de rematch (can be done immediately)
+      // IMPORTANTE: Detectar rematch_room_id ANTES de resetear el estado de rematch
+      // Cuando se acepta la revancha, rematch_requested_by se pone en null y rematch_room_id se setea
+      // Si reseteamos primero, perdemos la referencia de que estabamos en estado 'requested'
+      const wasRequested = rematchStatusRef.current === 'requested';
+
+      // Detectar si el otro jugador acepto la revancha
+      if (updatedRoom.rematch_room_id && wasRequested) {
+        console.log('[OnlineGame] Rematch accepted! Joining new room:', updatedRoom.rematch_room_id);
+        // Navegar a la nueva sala de revancha
+        (async () => {
+          const newRoom = await gameRoomService.getRoom(updatedRoom.rematch_room_id!);
+          if (newRoom) {
+            // Limpiar suscripcion actual
+            if (unsubscribeRef.current) {
+              unsubscribeRef.current();
+              unsubscribeRef.current = null;
+            }
+
+            // Actualizar estado para la nueva sala
+            setRoom(newRoom);
+            setBoard(dbBoardToBoardState(newRoom.board as string[]));
+            setWinner(null);
+            setIsDraw(false);
+            setStatus('playing');
+            setError(null);
+            setRematchStatus('none');
+
+            // Suscribirse a la nueva sala
+            unsubscribeRef.current = gameRoomService.subscribeToRoom(
+              newRoom.id,
+              handleRoomUpdate,
+              handleSubscriptionError,
+              handleConnectionStatus
+            );
+          }
+        })();
+        return; // No continuar procesando este update
+      }
+
+      // Manejar estado de rematch
       if (updatedRoom.rematch_requested_by) {
         if (updatedRoom.rematch_requested_by === userIdRef.current) {
           setRematchStatus('requested');
@@ -146,7 +204,7 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     }
   }, []); // No dependencies - uses refs for latest values
 
-  // Buscar partida
+  // Buscar partida (matchmaking público)
   const findMatch = useCallback(async () => {
     // Validar que hay un usuario autenticado
     if (!userId) {
@@ -201,14 +259,74 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
       // Suscribirse a cambios
       unsubscribeRef.current = gameRoomService.subscribeToRoom(
         newRoom.id,
-        handleRoomUpdate
+        handleRoomUpdate,
+        handleSubscriptionError,
+        handleConnectionStatus
       );
     } catch (err) {
       console.error('[OnlineGame] Error finding match:', err);
       setError('Error al buscar partida');
       setStatus('idle');
     }
-  }, [userId, handleRoomUpdate, cleanupSubscription]);
+  }, [userId, handleRoomUpdate, cleanupSubscription, handleSubscriptionError, handleConnectionStatus]);
+
+  // Crear sala privada (solo accesible via link de invitación)
+  const createPrivateRoom = useCallback(async () => {
+    if (!userId) {
+      console.error('[OnlineGame] createPrivateRoom called without userId');
+      setError('Usuario no autenticado');
+      setStatus('idle');
+      return;
+    }
+
+    setError(null);
+    setStatus('searching');
+
+    // Cleanup any existing subscription before creating new one
+    cleanupSubscription();
+
+    try {
+      console.log('[OnlineGame] Creating private room for user:', userId);
+      const newRoom = await gameRoomService.createPrivateRoom(userId);
+
+      if (!newRoom) {
+        console.error('[OnlineGame] createPrivateRoom returned null');
+        setError('Error al crear sala privada');
+        setStatus('idle');
+        return;
+      }
+
+      console.log('[OnlineGame] Created private room:', newRoom.id);
+
+      // Obtener sala con datos de jugadores
+      const roomWithPlayers = await gameRoomService.getRoom(newRoom.id);
+
+      if (roomWithPlayers) {
+        setRoom(roomWithPlayers);
+      } else {
+        setRoom({
+          ...newRoom,
+          player1: undefined,
+          player2: undefined,
+        } as GameRoomWithPlayers);
+      }
+
+      setBoard(dbBoardToBoardState(newRoom.board as string[]));
+      setStatus('waiting');
+
+      // Suscribirse a cambios
+      unsubscribeRef.current = gameRoomService.subscribeToRoom(
+        newRoom.id,
+        handleRoomUpdate,
+        handleSubscriptionError,
+        handleConnectionStatus
+      );
+    } catch (err) {
+      console.error('[OnlineGame] Error creating private room:', err);
+      setError('Error al crear sala privada');
+      setStatus('idle');
+    }
+  }, [userId, handleRoomUpdate, cleanupSubscription, handleSubscriptionError, handleConnectionStatus]);
 
   // Unirse a una sala específica por ID (para links compartidos)
   const joinRoom = useCallback(async (roomId: string) => {
@@ -264,14 +382,16 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
       // Suscribirse a cambios
       unsubscribeRef.current = gameRoomService.subscribeToRoom(
         newRoom.id,
-        handleRoomUpdate
+        handleRoomUpdate,
+        handleSubscriptionError,
+        handleConnectionStatus
       );
     } catch (err) {
       console.error('[OnlineGame] Error joining room:', err);
       setError('Error al unirse a la sala');
       setStatus('idle');
     }
-  }, [userId, handleRoomUpdate, cleanupSubscription]);
+  }, [userId, handleRoomUpdate, cleanupSubscription, handleSubscriptionError, handleConnectionStatus]);
 
   // Sincronizar estado con el servidor
   const syncWithServer = useCallback(async () => {
@@ -311,8 +431,9 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     const isDrawResult = !winResult && checkDraw(newBoard);
 
     if (winResult || isDrawResult) {
-      // Finalizar partida
-      const endSuccess = await gameRoomService.endGame(room.id, winResult ? userId : null, isDrawResult);
+      // Finalizar partida - incluir el board final para que el oponente vea la última jugada
+      const finalBoard = boardStateToDbBoard(newBoard);
+      const endSuccess = await gameRoomService.endGame(room.id, winResult ? userId : null, isDrawResult, finalBoard);
 
       if (!endSuccess) {
         // Revertir y sincronizar
@@ -412,9 +533,11 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     // Suscribirse a la nueva sala
     unsubscribeRef.current = gameRoomService.subscribeToRoom(
       newRoom.id,
-      handleRoomUpdate
+      handleRoomUpdate,
+      handleSubscriptionError,
+      handleConnectionStatus
     );
-  }, [cleanupSubscription, handleRoomUpdate]);
+  }, [cleanupSubscription, handleRoomUpdate, handleSubscriptionError, handleConnectionStatus]);
 
   // Solicitar revancha
   const requestRematch = useCallback(async () => {
@@ -500,6 +623,51 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     };
   }, [status, room?.id]);
 
+  // Polling fallback durante 'playing': safety net si Realtime falla
+  // Intervalo más largo (15s) porque es solo un fallback, no el mecanismo principal
+  useEffect(() => {
+    if (status !== 'playing' || !room) return;
+
+    console.log('[OnlineGame] Starting playing-state polling fallback for room:', room.id);
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const updatedRoom = await gameRoomService.getRoom(room.id);
+
+        if (updatedRoom) {
+          // Solo actualizar si hay cambios reales (comparar updated_at)
+          const currentTime = room.updated_at ? new Date(room.updated_at).getTime() : 0;
+          const newTime = updatedRoom.updated_at ? new Date(updatedRoom.updated_at).getTime() : 0;
+
+          if (newTime > currentTime) {
+            console.log('[OnlineGame] Polling detected change during playing state');
+            setRoom(prev => prev ? { ...prev, ...updatedRoom } : null);
+            setBoard(dbBoardToBoardState(updatedRoom.board as string[]));
+
+            // Manejar fin de juego detectado por polling
+            if (updatedRoom.status === 'finished') {
+              const newBoard = dbBoardToBoardState(updatedRoom.board as string[]);
+              if (updatedRoom.is_draw) {
+                setIsDraw(true);
+              } else if (updatedRoom.winner_id) {
+                const winResult = checkWinner(newBoard);
+                if (winResult) setWinner(winResult);
+              }
+              setStatus('finished');
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[OnlineGame] Playing-state polling error:', err);
+      }
+    }, 15000); // Cada 15 segundos - solo como fallback
+
+    return () => {
+      console.log('[OnlineGame] Stopping playing-state polling');
+      clearInterval(pollInterval);
+    };
+  }, [status, room?.id, room?.updated_at]);
+
   // Track previous status to detect transitions
   const prevStatusRef = useRef<OnlineGameStatus>('idle');
 
@@ -528,10 +696,13 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     isDraw,
     opponentName,
     findMatch,
+    createPrivateRoom,
     joinRoom,
     makeMove,
     leaveGame,
     error,
+    // Connection status
+    connectionStatus,
     // Rematch
     rematchStatus,
     requestRematch,

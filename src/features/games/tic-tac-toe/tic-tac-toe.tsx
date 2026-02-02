@@ -216,6 +216,16 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
     onlineGame.findMatch();
   };
 
+  const handleCreatePrivateRoom = () => {
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    setIsOnlineMode(true);
+    gameStartTimeRef.current = Date.now();
+    onlineGame.createPrivateRoom();
+  };
+
   const handlePlayAgain = async () => {
     await onlineGame.leaveGame();
     gameStartTimeRef.current = Date.now();
@@ -245,6 +255,7 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
         error={onlineGame.error}
         showLeaveConfirm={showLeaveConfirm}
         roomId={onlineGame.room?.id || null}
+        connectionStatus={onlineGame.connectionStatus}
         onCellClick={onlineGame.makeMove}
         onLeave={handleLeaveOnline}
         onConfirmLeave={confirmLeaveGame}
@@ -274,6 +285,7 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
           onHideAIConfig={() => setShowAIConfig(false)}
           onConfigChange={handleConfigChange}
           onPlayOnline={handlePlayOnline}
+          onCreatePrivateRoom={handleCreatePrivateRoom}
         />
         <AuthModal
           isOpen={showAuthModal}

@@ -100,14 +100,32 @@ export function Sidebar() {
     }, 100);
   }, [isCollapsed, setHoverExpanded]);
 
-  const handleMouseLeave = useCallback(() => {
+  const handleMouseLeave = useCallback((e: React.MouseEvent) => {
     // Clear any pending timeout
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current);
     }
 
-    // Collapse immediately when mouse leaves
-    setHoverExpanded(false);
+    // Don't collapse if mouse moved to a dropdown/menu (Radix portals)
+    // relatedTarget can be null, an Element, or other objects like Window
+    const relatedTarget = e.relatedTarget;
+    if (relatedTarget instanceof Element &&
+        (relatedTarget.closest('[role="menu"]') ||
+         relatedTarget.closest('[role="dialog"]') ||
+         relatedTarget.closest('[data-radix-popper-content-wrapper]'))) {
+      return;
+    }
+
+    // Delay collapse to allow dropdowns to open first
+    // This handles the case where clicking opens a dropdown (mouseLeave fires before dropdown exists)
+    hoverTimeoutRef.current = setTimeout(() => {
+      // Check if a dropdown/menu is now open anywhere on the page
+      const openMenu = document.querySelector('[role="menu"][data-state="open"], [data-radix-popper-content-wrapper]');
+      if (openMenu) {
+        return; // Don't collapse if a menu is open
+      }
+      setHoverExpanded(false);
+    }, 150);
   }, [setHoverExpanded]);
 
   // Cleanup timeout on unmount
@@ -320,7 +338,11 @@ export function Sidebar() {
                     value="arcade"
                     className={cn(
                       'flex-1 gap-2 data-[state=on]:bg-(--color-primary) data-[state=on]:text-white',
-                      'rounded-md px-3 py-2 text-sm font-medium'
+                      'rounded-md px-3 py-2 text-sm font-medium',
+                      'transition-all duration-200 ease-out',
+                      'hover:bg-(--color-primary)/20 hover:scale-[1.02]',
+                      'data-[state=on]:shadow-lg data-[state=on]:shadow-(--color-primary)/25',
+                      'active:scale-95'
                     )}
                   >
                     <Gamepad2 size={16} />
@@ -330,7 +352,11 @@ export function Sidebar() {
                     value="casino"
                     className={cn(
                       'flex-1 gap-2 data-[state=on]:bg-(--color-primary) data-[state=on]:text-white',
-                      'rounded-md px-3 py-2 text-sm font-medium'
+                      'rounded-md px-3 py-2 text-sm font-medium',
+                      'transition-all duration-200 ease-out',
+                      'hover:bg-(--color-primary)/20 hover:scale-[1.02]',
+                      'data-[state=on]:shadow-lg data-[state=on]:shadow-(--color-primary)/25',
+                      'active:scale-95'
                     )}
                   >
                     <Coins size={16} />

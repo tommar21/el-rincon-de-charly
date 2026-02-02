@@ -60,6 +60,7 @@ function SheetContent({
       <SheetOverlay />
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        aria-describedby={undefined}
         className={cn(
           // Base styles
           "bg-(--color-surface) fixed z-50 flex flex-col shadow-2xl",

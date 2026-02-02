@@ -17,6 +17,8 @@ import {
   ModalContent,
   ModalHeader,
   ModalBody,
+  ModalTitle,
+  ModalDescription,
 } from '@/components/ui/modal';
 import { useTheme, type Theme } from '@/components/client/theme-provider';
 import { cn } from '@/lib/utils/cn';
@@ -74,7 +76,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   return (
     <Modal open={isOpen} onClose={onClose}>
-      <ModalContent size="lg" ariaLabel="Configuración">
+      <ModalContent size="lg">
         {/* Header */}
         <ModalHeader>
           <div className="flex items-center gap-3">
@@ -82,12 +84,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <Settings className="text-(--color-primary)" size={20} />
             </div>
             <div>
-              <h2 className="font-heading font-bold text-lg text-(--color-text)">
+              <ModalTitle className="font-heading font-bold text-lg text-(--color-text)">
                 Configuración
-              </h2>
-              <p className="text-sm text-(--color-text-muted)">
+              </ModalTitle>
+              <ModalDescription className="text-sm text-(--color-text-muted)">
                 Personaliza tu experiencia
-              </p>
+              </ModalDescription>
             </div>
           </div>
         </ModalHeader>

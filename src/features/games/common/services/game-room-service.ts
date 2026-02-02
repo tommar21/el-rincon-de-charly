@@ -18,7 +18,9 @@ export interface GameRoom {
   board: string[];
   winner_id: string | null;
   is_draw: boolean;
+  is_private: boolean;
   rematch_requested_by: string | null;
+  rematch_room_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -28,9 +30,21 @@ export interface GameRoomWithPlayers extends GameRoom {
   player2?: { id: string; username: string; avatar_url: string | null };
 }
 
+export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
+
+interface ChannelSubscription {
+  channel: RealtimeChannel;
+  callbacks: Set<(room: GameRoom) => void>;
+  statusCallbacks: Set<(status: ConnectionStatus) => void>;
+  reconnectAttempts: number;
+  reconnectTimer?: ReturnType<typeof setTimeout>;
+}
+
 class GameRoomService {
-  // Map de canales por roomId para evitar que múltiples jugadores se sobrescriban
-  private channels: Map<string, RealtimeChannel> = new Map();
+  // Map de canales compartidos por roomId (optimización: un canal por sala)
+  private sharedChannels: Map<string, ChannelSubscription> = new Map();
+  // Map de suscripciones individuales para cleanup
+  private subscriptionToRoom: Map<string, string> = new Map();
 
   private get supabase() {
     return getClient();
@@ -62,6 +76,38 @@ class GameRoomService {
       return null;
     }
 
+    return data as GameRoom;
+  }
+
+  // Crear sala privada (solo accesible via link de invitacion)
+  async createPrivateRoom(playerId: string, gameType: string = 'tic-tac-toe'): Promise<GameRoom | null> {
+    if (!playerId) {
+      console.error('createPrivateRoom: playerId is required');
+      return null;
+    }
+
+    console.log('[PrivateRoom] Creating private room for player:', playerId);
+
+    const insertData = {
+      game_type: gameType,
+      player1_id: playerId,
+      current_turn: playerId,
+      status: 'waiting',
+      is_private: true,
+    } satisfies GameRoomInsert;
+
+    const { data, error } = await (this.supabase
+      .from('game_rooms') as ReturnType<typeof this.supabase.from>)
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating private room:', error);
+      return null;
+    }
+
+    console.log('[PrivateRoom] Created private room:', data.id);
     return data as GameRoom;
   }
 
@@ -212,12 +258,13 @@ class GameRoomService {
   }
 
   // Finalizar partida
-  async endGame(roomId: string, winnerId: string | null, isDraw: boolean): Promise<boolean> {
+  async endGame(roomId: string, winnerId: string | null, isDraw: boolean, finalBoard?: string[]): Promise<boolean> {
     const endGameData = {
       status: 'finished',
       winner_id: winnerId,
       is_draw: isDraw,
       updated_at: new Date().toISOString(),
+      ...(finalBoard && { board: finalBoard }),
     } satisfies GameRoomUpdate;
 
     const { error } = await (this.supabase
@@ -257,85 +304,156 @@ class GameRoomService {
     return true;
   }
 
-  // Suscribirse a cambios en una sala
+  // Suscribirse a cambios en una sala con reconexión automática y canales compartidos
   subscribeToRoom(
     roomId: string,
     callback: (room: GameRoom) => void,
-    onError?: (error: Error) => void
+    onError?: (error: Error) => void,
+    onStatusChange?: (status: ConnectionStatus) => void
   ): () => void {
-    // Crear un ID único para esta suscripción (permite múltiples jugadores en la misma sala)
     const subscriptionId = `${roomId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+    this.subscriptionToRoom.set(subscriptionId, roomId);
 
-    // Si ya hay una suscripción activa para este subscriptionId, limpiarla primero
-    const existingChannel = this.channels.get(subscriptionId);
-    if (existingChannel) {
-      this.supabase.removeChannel(existingChannel);
-      this.channels.delete(subscriptionId);
+    // Obtener o crear canal compartido para esta sala
+    let subscription = this.sharedChannels.get(roomId);
+
+    if (!subscription) {
+      // Crear nuevo canal compartido para la sala
+      subscription = {
+        channel: null as unknown as RealtimeChannel,
+        callbacks: new Set(),
+        statusCallbacks: new Set(),
+        reconnectAttempts: 0,
+      };
+      this.sharedChannels.set(roomId, subscription);
+
+      // Función para crear/recrear el canal
+      const createChannel = () => {
+        const sub = this.sharedChannels.get(roomId);
+        if (!sub) return;
+
+        // Notificar estado de conexión
+        const notifyStatus = (status: ConnectionStatus) => {
+          sub.statusCallbacks.forEach(cb => cb(status));
+        };
+
+        notifyStatus(sub.reconnectAttempts > 0 ? 'reconnecting' : 'connecting');
+
+        const channel = this.supabase
+          .channel(`room:${roomId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'game_rooms',
+              filter: `id=eq.${roomId}`,
+            },
+            (payload) => {
+              if (payload.new) {
+                // Notificar a todos los callbacks registrados
+                sub.callbacks.forEach(cb => cb(payload.new as GameRoom));
+              }
+            }
+          )
+          .subscribe((status, err) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('[Realtime] Connected to room:', roomId);
+              sub.reconnectAttempts = 0;
+              notifyStatus('connected');
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.error('[Realtime] Subscription error:', status, err);
+              notifyStatus('disconnected');
+
+              // Intentar reconexión con backoff exponencial
+              if (sub.reconnectAttempts < 5) {
+                const delay = Math.min(1000 * Math.pow(2, sub.reconnectAttempts), 30000);
+                console.log(`[Realtime] Reconnecting in ${delay}ms (attempt ${sub.reconnectAttempts + 1})`);
+
+                sub.reconnectTimer = setTimeout(() => {
+                  sub.reconnectAttempts++;
+                  // Limpiar canal anterior
+                  if (sub.channel) {
+                    this.supabase.removeChannel(sub.channel);
+                  }
+                  createChannel();
+                }, delay);
+              } else {
+                console.error('[Realtime] Max reconnection attempts reached');
+                onError?.(new Error('No se pudo conectar al servidor en tiempo real'));
+              }
+            } else if (status === 'CLOSED') {
+              notifyStatus('disconnected');
+            }
+          });
+
+        sub.channel = channel;
+      };
+
+      createChannel();
     }
 
-    const channel = this.supabase
-      .channel(`room:${subscriptionId}`) // Nombre único por suscripción
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'game_rooms',
-          filter: `id=eq.${roomId}`,
-        },
-        (payload) => {
-          if (payload.new) {
-            callback(payload.new as GameRoom);
-          }
-        }
-      )
-      .subscribe((status, err) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('[Realtime] Subscription error:', status, err);
-          onError?.(new Error(`Realtime subscription error: ${status}`));
-        }
-      });
+    // Registrar callbacks
+    subscription.callbacks.add(callback);
+    if (onStatusChange) {
+      subscription.statusCallbacks.add(onStatusChange);
+    }
 
-    this.channels.set(subscriptionId, channel);
-
+    // Retornar función de cleanup
     return () => {
-      const ch = this.channels.get(subscriptionId);
-      if (ch) {
-        this.supabase.removeChannel(ch);
-        this.channels.delete(subscriptionId);
+      const sub = this.sharedChannels.get(roomId);
+      if (sub) {
+        sub.callbacks.delete(callback);
+        if (onStatusChange) {
+          sub.statusCallbacks.delete(onStatusChange);
+        }
+
+        // Si no quedan callbacks, limpiar el canal compartido
+        if (sub.callbacks.size === 0) {
+          if (sub.reconnectTimer) {
+            clearTimeout(sub.reconnectTimer);
+          }
+          if (sub.channel) {
+            this.supabase.removeChannel(sub.channel);
+          }
+          this.sharedChannels.delete(roomId);
+        }
       }
+      this.subscriptionToRoom.delete(subscriptionId);
     };
   }
 
-  // Buscar partida (matchmaking simple)
+  // Buscar partida (matchmaking atomico para evitar race conditions)
   async findOrCreateMatch(playerId: string, gameType: string = 'tic-tac-toe'): Promise<GameRoom | null> {
     if (!playerId) {
       console.error('findOrCreateMatch: playerId is required');
       return null;
     }
 
-    // Buscar sala disponible
-    const rooms = await this.findAvailableRooms(gameType);
-    console.log('[Matchmaking] Available rooms:', rooms.length, 'for player:', playerId);
+    console.log('[Matchmaking] Finding or creating match for player:', playerId);
 
-    const availableRoom = rooms.find(r => r.player1_id !== playerId);
+    // Usar funcion RPC atomica para evitar race conditions
+    // cuando 2 jugadores buscan partida simultaneamente
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (this.supabase.rpc as any)('find_or_create_match', {
+      p_player_id: playerId,
+      p_game_type: gameType
+    });
 
-    if (availableRoom) {
-      console.log('[Matchmaking] Found room to join:', availableRoom.id);
-      // Unirse a sala existente
-      const joinedRoom = await this.joinRoom(availableRoom.id, playerId);
-      if (joinedRoom) {
-        console.log('[Matchmaking] Successfully joined room:', joinedRoom.id);
-      } else {
-        console.log('[Matchmaking] Failed to join room, creating new one');
-        return this.createRoom(playerId, gameType);
-      }
-      return joinedRoom;
+    if (error) {
+      console.error('[Matchmaking] RPC error:', error);
+      return null;
     }
 
-    console.log('[Matchmaking] No available rooms, creating new one');
-    // Crear nueva sala
-    return this.createRoom(playerId, gameType);
+    if (!data) {
+      console.error('[Matchmaking] No data returned from RPC');
+      return null;
+    }
+
+    const room = data as GameRoom;
+    console.log('[Matchmaking] Result:', room.status === 'playing' ? 'Joined existing room' : 'Created new room', room.id);
+
+    return room;
   }
 
   // Unirse a una sala específica por ID (para links compartidos)
@@ -468,10 +586,21 @@ class GameRoomService {
       return null;
     }
 
-    // Limpiar la solicitud de revancha de la sala anterior
-    await this.clearRematchRequest(roomId);
+    const newRoom = data as GameRoom;
 
-    return data as GameRoom;
+    // Guardar el ID de la nueva sala en la sala anterior
+    // Esto permite que el jugador que solicito la revancha sea notificado
+    // y pueda unirse a la nueva sala
+    await (this.supabase
+      .from('game_rooms') as ReturnType<typeof this.supabase.from>)
+      .update({
+        rematch_room_id: newRoom.id,
+        rematch_requested_by: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', roomId);
+
+    return newRoom;
   }
 
   // Rechazar/cancelar revancha

@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, Users, Globe, ArrowLeft, Zap, Star } from 'lucide-react';
+import { Bot, Users, Globe, ArrowLeft, Zap, Star, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils/cn';
 import type { AIDifficulty } from '../../../common/types/game.types';
@@ -53,6 +53,7 @@ interface ModeSelectionProps {
   onHideAIConfig: () => void;
   onConfigChange: (updates: Partial<LocalGameConfig>) => void;
   onPlayOnline: () => void;
+  onCreatePrivateRoom: () => void;
 }
 
 export function ModeSelection({
@@ -65,6 +66,7 @@ export function ModeSelection({
   onHideAIConfig,
   onConfigChange,
   onPlayOnline,
+  onCreatePrivateRoom,
 }: ModeSelectionProps) {
   return (
     <div className="game-container relative flex flex-col items-center justify-center p-4 sm:p-6 landscape:p-2">
@@ -124,16 +126,41 @@ export function ModeSelection({
               2 Jugadores
             </Button>
 
-            {/* Play Online */}
-            <Button
-              onClick={onPlayOnline}
-              variant={isAuthenticated ? 'success' : 'outline'}
-              size="lg"
-              className="w-full gap-2.5 py-4 sm:py-5 landscape:py-3"
-            >
-              <Globe size={20} />
-              {isAuthenticated ? 'Jugar Online' : 'Online (Inicia sesión)'}
-            </Button>
+            {/* Online Options */}
+            {isAuthenticated ? (
+              <div className="flex gap-2">
+                <Button
+                  onClick={onPlayOnline}
+                  variant="success"
+                  size="lg"
+                  className="flex-1 gap-2 py-4 sm:py-5 landscape:py-3"
+                >
+                  <Globe size={18} />
+                  <span className="hidden sm:inline">Buscar partida</span>
+                  <span className="sm:hidden">Buscar</span>
+                </Button>
+                <Button
+                  onClick={onCreatePrivateRoom}
+                  variant="outline"
+                  size="lg"
+                  className="flex-1 gap-2 py-4 sm:py-5 landscape:py-3 border-(--color-success) text-(--color-success) hover:bg-(--color-success)/10"
+                >
+                  <UserPlus size={18} />
+                  <span className="hidden sm:inline">Invitar amigo</span>
+                  <span className="sm:hidden">Invitar</span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={onPlayOnline}
+                variant="outline"
+                size="lg"
+                className="w-full gap-2.5 py-4 sm:py-5 landscape:py-3"
+              >
+                <Globe size={20} />
+                Online (Inicia sesión)
+              </Button>
+            )}
           </motion.div>
         ) : (
           <motion.div
