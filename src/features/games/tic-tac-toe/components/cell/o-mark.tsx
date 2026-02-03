@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 
 interface OMarkProps {
@@ -7,7 +8,7 @@ interface OMarkProps {
   className?: string;
 }
 
-export function OMark({
+export const OMark = memo(function OMark({
   color = 'var(--color-secondary)',
   className = '',
 }: OMarkProps) {
@@ -31,6 +32,6 @@ export function OMark({
       />
     </svg>
   );
-}
+});
 
 export default OMark;

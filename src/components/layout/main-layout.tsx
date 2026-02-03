@@ -50,7 +50,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="relative min-h-screen bg-(--color-background)">
       {/* Desktop Sidebar */}
-      <Sidebar />
+      <Sidebar onSearchClick={handleSearchClick} />
 
       {/* Main Content */}
       <main
@@ -72,6 +72,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <CommandPalette
         open={isCommandPaletteOpen}
         onOpenChange={setIsCommandPaletteOpen}
+        isMobile={isMobile}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +19,7 @@ const sizes = {
 };
 
 // Stylized dice icon with "C" integrated - modernized version
-function LogoIcon({ size = 32, className }: { size?: number; className?: string }) {
+const LogoIcon = memo(function LogoIcon({ size = 32, className }: { size?: number; className?: string }) {
   return (
     <svg
       width={size}
@@ -109,7 +110,7 @@ function LogoIcon({ size = 32, className }: { size?: number; className?: string 
       </g>
     </svg>
   );
-}
+});
 
 export function Logo({
   variant = 'full',

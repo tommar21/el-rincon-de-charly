@@ -3,10 +3,30 @@
 import { getClient } from '@/lib/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { InsertTables, UpdateTables } from '@/types/supabase.types';
+import { createLogger } from '@/lib/utils/logger';
+
+const log = createLogger({ prefix: 'GameRoomService' });
+const realtimeLog = createLogger({ prefix: 'Realtime' });
+const matchmakingLog = createLogger({ prefix: 'Matchmaking' });
 
 // Use Supabase generated types for database operations
 type GameRoomInsert = InsertTables<'game_rooms'>;
 type GameRoomUpdate = UpdateTables<'game_rooms'>;
+
+export type NegotiationState = 'none' | 'pending' | 'agreed' | 'no_bet';
+
+export interface GameRoomMetadata {
+  bet_amount?: number | null;
+  negotiation_state?: NegotiationState;
+  player1_bet_proposal?: number | null;
+  player2_bet_proposal?: number | null;
+  negotiation_deadline?: string | null;
+}
+
+export interface BetConfig {
+  wantsToBet: boolean;
+  betAmount: number;
+}
 
 export interface GameRoom {
   id: string;
@@ -21,6 +41,7 @@ export interface GameRoom {
   is_private: boolean;
   rematch_requested_by: string | null;
   rematch_room_id: string | null;
+  metadata: GameRoomMetadata | null;
   created_at: string;
   updated_at: string;
 }
@@ -53,7 +74,7 @@ class GameRoomService {
   // Crear una nueva sala
   async createRoom(playerId: string, gameType: string = 'tic-tac-toe'): Promise<GameRoom | null> {
     if (!playerId) {
-      console.error('createRoom: playerId is required');
+      log.error('createRoom: playerId is required');
       return null;
     }
 
@@ -72,7 +93,7 @@ class GameRoomService {
       .single();
 
     if (error) {
-      console.error('Error creating room:', error);
+      log.error('Error creating room:', error);
       return null;
     }
 
@@ -82,11 +103,11 @@ class GameRoomService {
   // Crear sala privada (solo accesible via link de invitacion)
   async createPrivateRoom(playerId: string, gameType: string = 'tic-tac-toe'): Promise<GameRoom | null> {
     if (!playerId) {
-      console.error('createPrivateRoom: playerId is required');
+      log.error('createPrivateRoom: playerId is required');
       return null;
     }
 
-    console.log('[PrivateRoom] Creating private room for player:', playerId);
+    log.log('Creating private room for player:', playerId);
 
     const insertData = {
       game_type: gameType,
@@ -103,11 +124,11 @@ class GameRoomService {
       .single();
 
     if (error) {
-      console.error('Error creating private room:', error);
+      log.error('Error creating private room:', error);
       return null;
     }
 
-    console.log('[PrivateRoom] Created private room:', data.id);
+    log.log('Created private room:', data.id);
     return data as GameRoom;
   }
 
@@ -126,7 +147,7 @@ class GameRoomService {
       .limit(10);
 
     if (error) {
-      console.error('Error finding rooms:', error);
+      log.error('Error finding rooms:', error);
       return [];
     }
 
@@ -136,12 +157,12 @@ class GameRoomService {
   // Unirse a una sala
   async joinRoom(roomId: string, playerId: string): Promise<GameRoom | null> {
     if (!playerId) {
-      console.error('joinRoom: playerId is required');
+      log.error('joinRoom: playerId is required');
       return null;
     }
 
     if (!roomId) {
-      console.error('joinRoom: roomId is required');
+      log.error('joinRoom: roomId is required');
       return null;
     }
 
@@ -161,13 +182,13 @@ class GameRoomService {
       .maybeSingle();
 
     if (error) {
-      console.error('Error joining room:', error);
+      log.error('Error joining room:', error);
       return null;
     }
 
     // Si no hay data, la sala ya fue ocupada por otro jugador
     if (!data) {
-      console.log('Room already taken or not available');
+      log.log('Room already taken or not available');
       return null;
     }
 
@@ -187,7 +208,7 @@ class GameRoomService {
       .single();
 
     if (error) {
-      console.error('Error getting room:', error);
+      log.error('Error getting room:', error);
       return null;
     }
 
@@ -273,7 +294,7 @@ class GameRoomService {
       .eq('id', roomId);
 
     if (error) {
-      console.error('Error ending game:', error);
+      log.error('Error ending game:', error);
       return false;
     }
 
@@ -358,17 +379,17 @@ class GameRoomService {
           )
           .subscribe((status, err) => {
             if (status === 'SUBSCRIBED') {
-              console.log('[Realtime] Connected to room:', roomId);
+              realtimeLog.log('Connected to room:', roomId);
               sub.reconnectAttempts = 0;
               notifyStatus('connected');
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              console.error('[Realtime] Subscription error:', status, err);
+              realtimeLog.error('Subscription error:', status, err);
               notifyStatus('disconnected');
 
               // Intentar reconexión con backoff exponencial
               if (sub.reconnectAttempts < 5) {
                 const delay = Math.min(1000 * Math.pow(2, sub.reconnectAttempts), 30000);
-                console.log(`[Realtime] Reconnecting in ${delay}ms (attempt ${sub.reconnectAttempts + 1})`);
+                realtimeLog.log(`Reconnecting in ${delay}ms (attempt ${sub.reconnectAttempts + 1})`);
 
                 sub.reconnectTimer = setTimeout(() => {
                   sub.reconnectAttempts++;
@@ -379,7 +400,7 @@ class GameRoomService {
                   createChannel();
                 }, delay);
               } else {
-                console.error('[Realtime] Max reconnection attempts reached');
+                realtimeLog.error('Max reconnection attempts reached');
                 onError?.(new Error('No se pudo conectar al servidor en tiempo real'));
               }
             } else if (status === 'CLOSED') {
@@ -426,34 +447,208 @@ class GameRoomService {
   // Buscar partida (matchmaking atomico para evitar race conditions)
   async findOrCreateMatch(playerId: string, gameType: string = 'tic-tac-toe'): Promise<GameRoom | null> {
     if (!playerId) {
-      console.error('findOrCreateMatch: playerId is required');
+      matchmakingLog.error('findOrCreateMatch: playerId is required');
       return null;
     }
 
-    console.log('[Matchmaking] Finding or creating match for player:', playerId);
+    matchmakingLog.log('Finding or creating match for player:', playerId);
 
     // Usar funcion RPC atomica para evitar race conditions
     // cuando 2 jugadores buscan partida simultaneamente
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (this.supabase.rpc as any)('find_or_create_match', {
+    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    const { data, error } = await this.supabase.rpc('find_or_create_match', {
       p_player_id: playerId,
       p_game_type: gameType
     });
 
     if (error) {
-      console.error('[Matchmaking] RPC error:', error);
+      matchmakingLog.error('RPC error:', error);
       return null;
     }
 
     if (!data) {
-      console.error('[Matchmaking] No data returned from RPC');
+      matchmakingLog.error('No data returned from RPC');
       return null;
     }
 
     const room = data as GameRoom;
-    console.log('[Matchmaking] Result:', room.status === 'playing' ? 'Joined existing room' : 'Created new room', room.id);
+    matchmakingLog.log('Result:', room.status === 'playing' ? 'Joined existing room' : 'Created new room', room.id);
 
     return room;
+  }
+
+  // Buscar partida CON apuesta (solo empareja jugadores con el mismo monto)
+  async findOrCreateMatchWithBet(
+    playerId: string,
+    betAmount: number,
+    gameType: string = 'tic-tac-toe'
+  ): Promise<GameRoom | null> {
+    if (!playerId) {
+      matchmakingLog.error('findOrCreateMatchWithBet: playerId is required');
+      return null;
+    }
+
+    if (betAmount <= 0) {
+      matchmakingLog.error('findOrCreateMatchWithBet: betAmount must be positive');
+      return null;
+    }
+
+    matchmakingLog.log('Finding or creating match with bet for player:', playerId, 'amount:', betAmount);
+
+    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    const { data, error } = await this.supabase.rpc('find_or_create_match_with_bet', {
+      p_player_id: playerId,
+      p_game_type: gameType,
+      p_bet_amount: betAmount
+    });
+
+    if (error) {
+      matchmakingLog.error('RPC error:', error);
+      return null;
+    }
+
+    if (!data) {
+      matchmakingLog.error('No data returned from RPC');
+      return null;
+    }
+
+    const room = data as GameRoom;
+    matchmakingLog.log('Result:', room.status === 'playing' ? 'Joined existing room' : 'Created new room', room.id, 'bet:', betAmount);
+
+    return room;
+  }
+
+  // Crear sala privada CON apuesta
+  async createPrivateRoomWithBet(
+    playerId: string,
+    betAmount: number,
+    gameType: string = 'tic-tac-toe'
+  ): Promise<GameRoom | null> {
+    if (!playerId) {
+      log.error('createPrivateRoomWithBet: playerId is required');
+      return null;
+    }
+
+    if (betAmount <= 0) {
+      log.error('createPrivateRoomWithBet: betAmount must be positive');
+      return null;
+    }
+
+    log.log('Creating private room with bet for player:', playerId, 'amount:', betAmount);
+
+    const insertData = {
+      game_type: gameType,
+      player1_id: playerId,
+      current_turn: playerId,
+      status: 'waiting',
+      is_private: true,
+      metadata: { bet_amount: betAmount },
+    } satisfies GameRoomInsert;
+
+    const { data, error } = await (this.supabase
+      .from('game_rooms') as ReturnType<typeof this.supabase.from>)
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      log.error('Error creating private room with bet:', error);
+      return null;
+    }
+
+    log.log('Created private room with bet:', data.id, 'amount:', betAmount);
+    return data as GameRoom;
+  }
+
+  // Join room with bet preference (for negotiation system)
+  async joinRoomWithBetPreference(
+    roomId: string,
+    playerId: string,
+    wantsBet: boolean = false,
+    betAmount: number | null = null
+  ): Promise<{ room: GameRoom | null; error: string | null }> {
+    if (!playerId) {
+      return { room: null, error: 'Usuario no autenticado' };
+    }
+
+    if (!roomId) {
+      return { room: null, error: 'ID de sala no válido' };
+    }
+
+    const room = await this.getRoom(roomId);
+    if (!room) {
+      return { room: null, error: 'Sala no encontrada' };
+    }
+
+    if (room.status !== 'waiting') {
+      return { room: null, error: 'Esta sala ya no está disponible' };
+    }
+
+    if (room.player2_id !== null) {
+      return { room: null, error: 'Esta sala ya está llena' };
+    }
+
+    if (room.player1_id === playerId) {
+      return { room: room, error: null };
+    }
+
+    // Get player1's bet preference
+    const currentMetadata = room.metadata as GameRoomMetadata | null;
+    const player1WantsBet = (currentMetadata?.player1_bet_proposal ?? 0) > 0;
+    const player1Amount = currentMetadata?.player1_bet_proposal ?? 0;
+
+    // Determine negotiation state
+    let negotiationState: NegotiationState;
+    let finalBetAmount: number | null = null;
+    let newStatus: 'waiting' | 'playing' = 'playing';
+
+    if (!player1WantsBet && !wantsBet) {
+      // Neither wants to bet
+      negotiationState = 'none';
+    } else if (player1WantsBet && wantsBet && player1Amount === betAmount) {
+      // Same amount - immediate agreement
+      negotiationState = 'agreed';
+      finalBetAmount = betAmount;
+    } else if (player1WantsBet && wantsBet) {
+      // Different amounts - need negotiation
+      negotiationState = 'pending';
+      newStatus = 'waiting'; // Stay in waiting during negotiation
+    } else {
+      // Only one wants to bet - no bet
+      negotiationState = 'no_bet';
+    }
+
+    const deadline = negotiationState === 'pending'
+      ? new Date(Date.now() + 30000).toISOString()
+      : null;
+
+    const newMetadata: GameRoomMetadata = {
+      negotiation_state: negotiationState,
+      bet_amount: finalBetAmount,
+      player1_bet_proposal: player1Amount || null,
+      player2_bet_proposal: wantsBet && betAmount ? betAmount : null,
+      negotiation_deadline: deadline,
+    };
+
+    const { data, error } = await (this.supabase
+      .from('game_rooms') as ReturnType<typeof this.supabase.from>)
+      .update({
+        player2_id: playerId,
+        status: newStatus,
+        metadata: newMetadata,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', roomId)
+      .eq('status', 'waiting')
+      .select()
+      .single();
+
+    if (error) {
+      log.error('Error joining room with bet preference:', error);
+      return { room: null, error: 'No se pudo unir a la sala' };
+    }
+
+    return { room: data as GameRoom, error: null };
   }
 
   // Unirse a una sala específica por ID (para links compartidos)
@@ -497,19 +692,19 @@ class GameRoomService {
   // Solicitar revancha
   async requestRematch(roomId: string, playerId: string): Promise<boolean> {
     if (!roomId || !playerId) {
-      console.error('requestRematch: roomId and playerId are required');
+      log.error('requestRematch: roomId and playerId are required');
       return false;
     }
 
     const room = await this.getRoom(roomId);
     if (!room || room.status !== 'finished') {
-      console.error('requestRematch: room not found or not finished');
+      log.error('requestRematch: room not found or not finished');
       return false;
     }
 
     // Verificar que el jugador es parte de esta sala
     if (room.player1_id !== playerId && room.player2_id !== playerId) {
-      console.error('requestRematch: player is not part of this room');
+      log.error('requestRematch: player is not part of this room');
       return false;
     }
 
@@ -524,7 +719,7 @@ class GameRoomService {
       .eq('id', roomId);
 
     if (error) {
-      console.error('Error requesting rematch:', error);
+      log.error('Error requesting rematch:', error);
       return false;
     }
 
@@ -534,31 +729,31 @@ class GameRoomService {
   // Aceptar revancha - crea nueva sala con roles invertidos
   async acceptRematch(roomId: string, playerId: string): Promise<GameRoom | null> {
     if (!roomId || !playerId) {
-      console.error('acceptRematch: roomId and playerId are required');
+      log.error('acceptRematch: roomId and playerId are required');
       return null;
     }
 
     const room = await this.getRoom(roomId);
     if (!room || room.status !== 'finished') {
-      console.error('acceptRematch: room not found or not finished');
+      log.error('acceptRematch: room not found or not finished');
       return null;
     }
 
     // Verificar que hay una solicitud de revancha pendiente
     if (!room.rematch_requested_by) {
-      console.error('acceptRematch: no rematch request pending');
+      log.error('acceptRematch: no rematch request pending');
       return null;
     }
 
     // El que acepta debe ser el otro jugador (no el que solicitó)
     if (room.rematch_requested_by === playerId) {
-      console.error('acceptRematch: cannot accept your own rematch request');
+      log.error('acceptRematch: cannot accept your own rematch request');
       return null;
     }
 
     // Verificar que el jugador es parte de esta sala
     if (room.player1_id !== playerId && room.player2_id !== playerId) {
-      console.error('acceptRematch: player is not part of this room');
+      log.error('acceptRematch: player is not part of this room');
       return null;
     }
 
@@ -582,7 +777,7 @@ class GameRoomService {
       .single();
 
     if (error) {
-      console.error('Error creating rematch room:', error);
+      log.error('Error creating rematch room:', error);
       return null;
     }
 
@@ -621,11 +816,210 @@ class GameRoomService {
       .eq('id', roomId);
 
     if (error) {
-      console.error('Error clearing rematch request:', error);
+      log.error('Error clearing rematch request:', error);
       return false;
     }
 
     return true;
+  }
+
+  // ============================================
+  // SISTEMA DE NEGOCIACIÓN DE APUESTAS
+  // ============================================
+
+  // Buscar partida con sistema de negociación (no filtra por monto)
+  async findOrCreateMatchWithNegotiation(
+    playerId: string,
+    gameType: string = 'tic-tac-toe',
+    betConfig?: BetConfig
+  ): Promise<GameRoom | null> {
+    if (!playerId) {
+      matchmakingLog.error('findOrCreateMatchWithNegotiation: playerId is required');
+      return null;
+    }
+
+    const wantsBet = betConfig?.wantsToBet ?? false;
+    const betAmount = betConfig?.betAmount ?? null;
+
+    matchmakingLog.log('Finding match with negotiation for player:', playerId, 'wantsBet:', wantsBet, 'amount:', betAmount);
+
+    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    const { data, error } = await this.supabase.rpc('find_or_create_match_v2', {
+      p_player_id: playerId,
+      p_game_type: gameType,
+      p_wants_bet: wantsBet,
+      p_bet_amount: betAmount
+    });
+
+    if (error) {
+      matchmakingLog.error('RPC error:', error);
+      return null;
+    }
+
+    if (!data) {
+      matchmakingLog.error('No data returned from RPC');
+      return null;
+    }
+
+    const room = data as GameRoom;
+    const negotiationState = (room.metadata as GameRoomMetadata)?.negotiation_state;
+    matchmakingLog.log('Result:', room.status, 'negotiation:', negotiationState, room.id);
+
+    return room;
+  }
+
+  // Crear sala privada con preferencia de apuesta (para negociación)
+  async createPrivateRoomWithNegotiation(
+    playerId: string,
+    gameType: string = 'tic-tac-toe',
+    betConfig?: BetConfig
+  ): Promise<GameRoom | null> {
+    if (!playerId) {
+      log.error('createPrivateRoomWithNegotiation: playerId is required');
+      return null;
+    }
+
+    const wantsBet = betConfig?.wantsToBet ?? false;
+    const betAmount = betConfig?.betAmount ?? null;
+
+    log.log('Creating private room with negotiation for player:', playerId, 'wantsBet:', wantsBet, 'amount:', betAmount);
+
+    const insertData = {
+      game_type: gameType,
+      player1_id: playerId,
+      current_turn: playerId,
+      status: 'waiting',
+      is_private: true,
+      metadata: {
+        negotiation_state: 'none',
+        player1_bet_proposal: wantsBet ? betAmount : null,
+      },
+    } satisfies GameRoomInsert;
+
+    const { data, error } = await (this.supabase
+      .from('game_rooms') as ReturnType<typeof this.supabase.from>)
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      log.error('Error creating private room with negotiation:', error);
+      return null;
+    }
+
+    log.log('Created private room:', data.id);
+    return data as GameRoom;
+  }
+
+  // Enviar propuesta de apuesta durante negociación
+  async submitBetProposal(roomId: string, playerId: string, amount: number): Promise<GameRoom | null> {
+    if (!roomId || !playerId) {
+      log.error('submitBetProposal: roomId and playerId are required');
+      return null;
+    }
+
+    log.log('Submitting bet proposal:', roomId, playerId, amount);
+
+    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    const { data, error } = await this.supabase.rpc('submit_bet_proposal', {
+      p_room_id: roomId,
+      p_player_id: playerId,
+      p_amount: amount
+    });
+
+    if (error) {
+      log.error('Error submitting bet proposal:', error);
+      return null;
+    }
+
+    return data as GameRoom;
+  }
+
+  // Aceptar propuesta del oponente
+  async acceptBetProposal(roomId: string, playerId: string): Promise<GameRoom | null> {
+    if (!roomId || !playerId) {
+      log.error('acceptBetProposal: roomId and playerId are required');
+      return null;
+    }
+
+    log.log('Accepting bet proposal:', roomId, playerId);
+
+    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    const { data, error } = await this.supabase.rpc('accept_bet_proposal', {
+      p_room_id: roomId,
+      p_player_id: playerId
+    });
+
+    if (error) {
+      log.error('Error accepting bet proposal:', error);
+      return null;
+    }
+
+    return data as GameRoom;
+  }
+
+  // Saltar apuesta y comenzar sin apostar
+  async skipBetting(roomId: string, playerId: string): Promise<GameRoom | null> {
+    if (!roomId || !playerId) {
+      log.error('skipBetting: roomId and playerId are required');
+      return null;
+    }
+
+    log.log('Skipping betting:', roomId, playerId);
+
+    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    const { data, error } = await this.supabase.rpc('skip_betting', {
+      p_room_id: roomId,
+      p_player_id: playerId
+    });
+
+    if (error) {
+      log.error('Error skipping betting:', error);
+      return null;
+    }
+
+    return data as GameRoom;
+  }
+
+  // Verificar timeout de negociación
+  async checkNegotiationTimeout(roomId: string): Promise<GameRoom | null> {
+    if (!roomId) {
+      return null;
+    }
+
+    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    const { data, error } = await this.supabase.rpc('check_negotiation_timeout', {
+      p_room_id: roomId
+    });
+
+    if (error) {
+      log.error('Error checking negotiation timeout:', error);
+      return null;
+    }
+
+    return data as GameRoom;
+  }
+
+  // Obtener estado de negociación de una sala
+  getNegotiationState(room: GameRoom): {
+    state: NegotiationState;
+    myProposal: number | null;
+    theirProposal: number | null;
+    deadline: Date | null;
+    agreedAmount: number | null;
+  } | null {
+    const metadata = room.metadata as GameRoomMetadata | null;
+    if (!metadata) {
+      return null;
+    }
+
+    return {
+      state: metadata.negotiation_state ?? 'none',
+      myProposal: null, // Debe ser determinado por el caller según el playerId
+      theirProposal: null,
+      deadline: metadata.negotiation_deadline ? new Date(metadata.negotiation_deadline) : null,
+      agreedAmount: metadata.bet_amount ?? null,
+    };
   }
 }
 

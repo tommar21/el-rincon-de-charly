@@ -10,6 +10,6 @@ export const ticTacToeConfig: GameConfig = {
   maxPlayers: 2,
   supportsAI: true,
   supportsOnline: true,
-  supportsBetting: false,
+  supportsBetting: true,
   enabled: true,
 };

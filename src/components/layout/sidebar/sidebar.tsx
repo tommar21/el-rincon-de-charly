@@ -2,10 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 import {
   Gamepad2,
-  Coins,
   Search,
   PanelLeftClose,
   PanelLeft,
@@ -13,7 +11,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo, LogoIcon } from '@/components/brand/logo';
 import { UserMenu, useAuth } from '@/features/auth';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   Tooltip,
   TooltipContent,
@@ -22,7 +19,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useSidebarStore, type GameSection } from './use-sidebar-store';
+import { useSidebarStore } from './use-sidebar-store';
 
 // Animation variants for smooth transitions
 const fadeInOut = {
@@ -37,19 +34,19 @@ const slideIn = {
   exit: { opacity: 0, x: -8 },
 };
 
-export function Sidebar() {
+interface SidebarProps {
+  onSearchClick?: () => void;
+}
+
+export function Sidebar({ onSearchClick }: SidebarProps) {
   const {
     isCollapsed,
     isHoverExpanded,
     toggle,
     setHoverExpanded,
-    currentSection,
-    setCurrentSection,
   } = useSidebarStore();
   const { isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
-  const pathname = usePathname();
-  const router = useRouter();
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Computed: show expanded content when not collapsed OR when hover expanded
@@ -60,9 +57,6 @@ export function Sidebar() {
 
   // The margin for main content (only changes on actual collapse, not hover)
   const contentMargin = isCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)';
-
-  // Check if we're inside a game page (e.g., /games/tic-tac-toe)
-  const isInGame = pathname?.match(/^\/games\/[^/]+$/) !== null;
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -136,14 +130,6 @@ export function Sidebar() {
       }
     };
   }, []);
-
-  // Handle section change with redirect if inside a game
-  const handleSectionChange = (section: GameSection) => {
-    setCurrentSection(section);
-    if (isInGame) {
-      router.push('/games');
-    }
-  };
 
   // Render placeholder during SSR/hydration to prevent layout shift
   if (!mounted) {
@@ -279,13 +265,12 @@ export function Sidebar() {
           )}
         </AnimatePresence>
 
-        {/* Section Toggle (Arcade / Casino) */}
+        {/* Games Link */}
         <div className={cn('border-b border-(--sidebar-border)/30 transition-all duration-200', showExpanded ? 'px-4 pt-4 pb-4' : 'px-3 pt-3 pb-3')}>
           <AnimatePresence mode="wait" initial={false}>
             {!showExpanded ? (
               <motion.div
-                key="collapsed-sections"
-                className="flex flex-col gap-2"
+                key="collapsed-games"
                 variants={fadeInOut}
                 initial="initial"
                 animate="animate"
@@ -294,75 +279,37 @@ export function Sidebar() {
               >
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant={currentSection === 'arcade' ? 'primary' : 'ghost'}
-                      size="icon"
-                      onClick={() => handleSectionChange('arcade')}
-                      className="w-full h-10"
-                    >
-                      <Gamepad2 size={18} />
-                    </Button>
+                    <Link href="/games">
+                      <Button
+                        variant="primary"
+                        size="icon"
+                        className="w-full h-10"
+                      >
+                        <Gamepad2 size={18} />
+                      </Button>
+                    </Link>
                   </TooltipTrigger>
-                  <TooltipContent side="right">Arcade</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={currentSection === 'casino' ? 'primary' : 'ghost'}
-                      size="icon"
-                      onClick={() => handleSectionChange('casino')}
-                      className="w-full h-10"
-                    >
-                      <Coins size={18} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Casino</TooltipContent>
+                  <TooltipContent side="right">Juegos</TooltipContent>
                 </Tooltip>
               </motion.div>
             ) : (
               <motion.div
-                key="expanded-sections"
+                key="expanded-games"
                 variants={slideIn}
                 initial="initial"
                 animate="animate"
                 exit="exit"
                 transition={{ duration: 0.15 }}
               >
-                <ToggleGroup
-                  type="single"
-                  value={currentSection}
-                  onValueChange={(value) => value && handleSectionChange(value as GameSection)}
-                  className="w-full bg-(--color-background) rounded-lg p-1"
-                >
-                  <ToggleGroupItem
-                    value="arcade"
-                    className={cn(
-                      'flex-1 gap-2 data-[state=on]:bg-(--color-primary) data-[state=on]:text-white',
-                      'rounded-md px-3 py-2 text-sm font-medium',
-                      'transition-all duration-200 ease-out',
-                      'hover:bg-(--color-primary)/20 hover:scale-[1.02]',
-                      'data-[state=on]:shadow-lg data-[state=on]:shadow-(--color-primary)/25',
-                      'active:scale-95'
-                    )}
+                <Link href="/games">
+                  <Button
+                    variant="primary"
+                    className="w-full gap-2"
                   >
-                    <Gamepad2 size={16} />
-                    Arcade
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="casino"
-                    className={cn(
-                      'flex-1 gap-2 data-[state=on]:bg-(--color-primary) data-[state=on]:text-white',
-                      'rounded-md px-3 py-2 text-sm font-medium',
-                      'transition-all duration-200 ease-out',
-                      'hover:bg-(--color-primary)/20 hover:scale-[1.02]',
-                      'data-[state=on]:shadow-lg data-[state=on]:shadow-(--color-primary)/25',
-                      'active:scale-95'
-                    )}
-                  >
-                    <Coins size={16} />
-                    Casino
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                    <Gamepad2 size={18} />
+                    Juegos
+                  </Button>
+                </Link>
               </motion.div>
             )}
           </AnimatePresence>
@@ -380,25 +327,25 @@ export function Sidebar() {
               exit="exit"
               transition={{ duration: 0.15 }}
             >
-              <div className="relative">
-                <Search
-                  size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-subtle)"
-                  aria-hidden="true"
-                />
-                <input
-                  type="search"
-                  placeholder="Buscar juegos..."
-                  aria-label="Buscar juegos"
-                  className={cn(
-                    'w-full pl-10 pr-4 py-2.5 rounded-lg',
-                    'bg-(--color-background) border border-(--color-border)',
-                    'text-sm placeholder:text-(--color-text-subtle)',
-                    'focus:outline-none focus:border-(--color-primary) focus:ring-1 focus:ring-primary/20',
-                    'transition-all duration-200'
-                  )}
-                />
-              </div>
+              <button
+                onClick={onSearchClick}
+                className={cn(
+                  'w-full flex items-center gap-2 pl-3 pr-3 py-2.5 rounded-lg',
+                  'bg-(--color-background) border border-(--color-border)',
+                  'text-sm text-(--color-text-subtle)',
+                  'hover:border-(--color-primary) hover:bg-(--color-background-hover)',
+                  'focus:outline-none focus:border-(--color-primary) focus:ring-1 focus:ring-primary/20',
+                  'transition-all duration-200',
+                  'cursor-pointer'
+                )}
+                aria-label="Buscar juegos"
+              >
+                <Search size={16} aria-hidden="true" />
+                <span className="flex-1 text-left">Buscar juegos...</span>
+                <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-(--color-background-subtle) px-1.5 font-mono text-[10px] font-medium text-(--color-text-muted)">
+                  Ctrl+K
+                </kbd>
+              </button>
             </motion.div>
           ) : (
             <motion.div
@@ -412,7 +359,7 @@ export function Sidebar() {
             >
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="w-full h-10" aria-label="Buscar juegos">
+                  <Button variant="ghost" size="icon" className="w-full h-10" aria-label="Buscar juegos" onClick={onSearchClick}>
                     <Search size={18} aria-hidden="true" />
                   </Button>
                 </TooltipTrigger>

@@ -96,6 +96,7 @@ export interface Database {
           is_private: boolean;
           rematch_requested_by: string | null;
           rematch_room_id: string | null;
+          metadata: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -112,6 +113,7 @@ export interface Database {
           is_private?: boolean;
           rematch_requested_by?: string | null;
           rematch_room_id?: string | null;
+          metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -128,6 +130,7 @@ export interface Database {
           is_private?: boolean;
           rematch_requested_by?: string | null;
           rematch_room_id?: string | null;
+          metadata?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

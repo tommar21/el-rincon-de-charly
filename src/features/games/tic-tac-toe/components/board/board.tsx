@@ -5,6 +5,22 @@ import type { BoardState } from '../../types';
 import { Cell } from '../cell';
 import { cn } from '@/lib/utils/cn';
 
+// Animation variants defined outside component to prevent recreation on each render
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+};
+
+const cellVariants = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: { opacity: 1, scale: 1 },
+};
+
 interface BoardProps {
   board: BoardState;
   onCellClick: (index: number) => void;
@@ -20,21 +36,6 @@ export function Board({
   winningLine = null,
   className = '',
 }: BoardProps) {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-      },
-    },
-  };
-
-  const cellVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { opacity: 1, scale: 1 },
-  };
-
   return (
     <motion.div
       data-testid="board"

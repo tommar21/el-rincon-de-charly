@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 
 interface XMarkProps {
@@ -7,7 +8,7 @@ interface XMarkProps {
   className?: string;
 }
 
-export function XMark({
+export const XMark = memo(function XMark({
   color = 'var(--color-primary)',
   className = '',
 }: XMarkProps) {
@@ -45,6 +46,6 @@ export function XMark({
       />
     </svg>
   );
-}
+});
 
 export default XMark;

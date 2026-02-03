@@ -172,7 +172,7 @@ export function useAuth() {
         // Ignore SIGNED_OUT if we're in the middle of a session refresh
         // This prevents false logouts during token refresh when opening shared links
         if (event === 'SIGNED_OUT' && isRefreshingSessionRef.current) {
-          console.log('[Auth] Ignoring SIGNED_OUT during session refresh');
+          console.debug('[Auth] Ignoring SIGNED_OUT during session refresh');
           return;
         }
 

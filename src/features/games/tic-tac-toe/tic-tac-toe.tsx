@@ -8,11 +8,19 @@ import { useTicTacToe } from './hooks/use-tic-tac-toe';
 import { useOnlineGame } from './hooks/use-online-game';
 import { useStatsStore } from '@/features/profile';
 import { useAuth } from '@/features/auth';
+import { useWalletStore } from '@/features/wallet/store/wallet-store';
 
-// Dynamic import for modal - reduces initial bundle
+// Dynamic import for modals - reduces initial bundle
 const AuthModal = dynamic(() => import('@/features/auth').then(m => m.AuthModal), { ssr: false });
 import type { AIDifficulty, Player } from '../common/types/game.types';
 import type { GameProps, GameMode } from '../registry/types';
+import type { BetConfig } from '../common/hooks';
+import { createLogger } from '@/lib/utils/logger';
+
+const log = createLogger({ prefix: 'TicTacToe' });
+
+// UUID v4 validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // Loading skeleton component
 function GameLoadingSkeleton() {
@@ -61,6 +69,8 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
   const movesCountRef = useRef<number>(0);
   const { recordGame } = useStatsStore();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { wallet } = useWalletStore();
+  const balance = wallet?.balance ?? 0;
 
   // Wait for auth to initialize before showing content
   useEffect(() => {
@@ -72,7 +82,9 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
   // URL params for shared room links
   const searchParams = useSearchParams();
   const router = useRouter();
-  const roomParam = searchParams.get('room');
+  const rawRoomParam = searchParams.get('room');
+  // Validate room ID format to prevent enumeration attacks
+  const roomParam = rawRoomParam && UUID_REGEX.test(rawRoomParam) ? rawRoomParam : null;
 
   // Online game hook
   const onlineGame = useOnlineGame({
@@ -151,7 +163,7 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
     if (isLoading) return;
 
     if (roomParam && !isAuthenticated) {
-      console.log('[TicTacToe] Room param detected but user not authenticated, showing auth modal');
+      log.log('Room param detected but user not authenticated, showing auth modal');
       setPendingRoomJoin(true);
       setShowAuthModal(true);
     }
@@ -163,7 +175,7 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
     if (isLoading) return;
 
     if (roomParam && isAuthenticated && user?.id) {
-      console.log('[TicTacToe] Room param detected:', roomParam, 'User:', user.id);
+      log.log('Room param detected:', roomParam, 'User:', user.id);
       setIsOnlineMode(true);
       gameStartTimeRef.current = Date.now();
       onlineGame.joinRoom(roomParam);
@@ -206,25 +218,35 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
     setIsOnlineMode(false);
   };
 
-  const handlePlayOnline = () => {
+  const handlePlayOnline = useCallback((betConfig?: BetConfig) => {
     if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
     }
     setIsOnlineMode(true);
     gameStartTimeRef.current = Date.now();
-    onlineGame.findMatch();
-  };
 
-  const handleCreatePrivateRoom = () => {
+    if (betConfig?.wantsToBet && betConfig.betAmount > 0) {
+      onlineGame.findMatchWithBet(betConfig.betAmount);
+    } else {
+      onlineGame.findMatch();
+    }
+  }, [isAuthenticated, onlineGame]);
+
+  const handleCreatePrivateRoom = useCallback((betConfig?: BetConfig) => {
     if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
     }
     setIsOnlineMode(true);
     gameStartTimeRef.current = Date.now();
-    onlineGame.createPrivateRoom();
-  };
+
+    if (betConfig?.wantsToBet && betConfig.betAmount > 0) {
+      onlineGame.createPrivateRoomWithBet(betConfig.betAmount);
+    } else {
+      onlineGame.createPrivateRoom();
+    }
+  }, [isAuthenticated, onlineGame]);
 
   const handlePlayAgain = async () => {
     await onlineGame.leaveGame();
@@ -267,6 +289,14 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
         onRequestRematch={onlineGame.requestRematch}
         onAcceptRematch={onlineGame.acceptRematch}
         onDeclineRematch={onlineGame.declineRematch}
+        betAmount={onlineGame.betAmount}
+        potTotal={onlineGame.potTotal}
+        isPrivateRoom={onlineGame.isPrivateRoom}
+        negotiation={onlineGame.negotiation}
+        balance={balance}
+        onSubmitBetProposal={onlineGame.submitBetProposal}
+        onAcceptBetProposal={onlineGame.acceptBetProposal}
+        onSkipBetting={onlineGame.skipBetting}
       />
     );
   }

@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CellValue } from '../../types';
 import { cn } from '@/lib/utils/cn';
@@ -27,7 +28,7 @@ const winningCellVariants = {
   }
 };
 
-export function Cell({
+export const Cell = memo(function Cell({
   value,
   index,
   onClick,
@@ -103,6 +104,6 @@ export function Cell({
       </AnimatePresence>
     </motion.button>
   );
-}
+});
 
 export default Cell;

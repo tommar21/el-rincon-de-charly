@@ -4,17 +4,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Hash,
-  Circle,
-  Crown,
-  CircleDot,
   Gamepad2,
   Zap,
   Moon,
   Flame,
-  Settings,
-  User,
-  Trophy,
-  BarChart3,
 } from 'lucide-react';
 import {
   CommandDialog,
@@ -26,23 +19,15 @@ import {
   CommandSeparator,
 } from '@/components/ui/command';
 import { useTheme, type Theme } from '@/components/client/theme-provider';
-import { useAuth } from '@/features/auth';
-import { cn } from '@/lib/utils';
 
 // Game icons mapping
 const gameIcons: Record<string, typeof Hash> = {
   'tic-tac-toe': Hash,
-  'connect-4': Circle,
-  chess: Crown,
-  checkers: CircleDot,
 };
 
-// Available games
+// Available games (only show games that are actually playable)
 const games = [
-  { slug: 'tic-tac-toe', name: 'Tic Tac Toe', available: true },
-  { slug: 'connect-4', name: 'Conecta 4', available: false },
-  { slug: 'chess', name: 'Ajedrez', available: false },
-  { slug: 'checkers', name: 'Damas', available: false },
+  { slug: 'tic-tac-toe', name: 'Tic Tac Toe' },
 ];
 
 // Theme options
@@ -55,14 +40,14 @@ const themes: { name: Theme; label: string; icon: typeof Zap }[] = [
 interface CommandPaletteProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  isMobile?: boolean;
 }
 
-export function CommandPalette({ open: controlledOpen, onOpenChange }: CommandPaletteProps) {
+export function CommandPalette({ open: controlledOpen, onOpenChange, isMobile = false }: CommandPaletteProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { isAuthenticated } = useAuth();
 
   // Prevent hydration mismatch with Radix UI generated IDs
   useEffect(() => {
@@ -109,84 +94,54 @@ export function CommandPalette({ open: controlledOpen, onOpenChange }: CommandPa
             return (
               <CommandItem
                 key={game.slug}
-                disabled={!game.available}
-                onSelect={() => {
-                  if (game.available) {
-                    runCommand(() => router.push(`/games/${game.slug}`));
-                  }
-                }}
-                className={cn(!game.available && 'opacity-50')}
+                onSelect={() => runCommand(() => router.push(`/games/${game.slug}`))}
               >
                 <Icon size={16} className="mr-2" />
                 <span>{game.name}</span>
-                {!game.available && (
-                  <span className="ml-auto text-xs text-(--color-text-muted)">
-                    Pronto
-                  </span>
-                )}
               </CommandItem>
             );
           })}
         </CommandGroup>
 
-        <CommandSeparator />
+        {/* Themes - Only on desktop */}
+        {!isMobile && (
+          <>
+            <CommandSeparator />
+            <CommandGroup heading="Tema">
+              {themes.map((t) => {
+                const Icon = t.icon;
+                const isActive = theme === t.name;
+                return (
+                  <CommandItem
+                    key={t.name}
+                    onSelect={() => runCommand(() => setTheme(t.name))}
+                  >
+                    <Icon size={16} className="mr-2" />
+                    <span>{t.label}</span>
+                    {isActive && (
+                      <span className="ml-auto text-xs text-(--color-primary)">
+                        Activo
+                      </span>
+                    )}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </>
+        )}
 
-        {/* Themes */}
-        <CommandGroup heading="Tema">
-          {themes.map((t) => {
-            const Icon = t.icon;
-            const isActive = theme === t.name;
-            return (
-              <CommandItem
-                key={t.name}
-                onSelect={() => runCommand(() => setTheme(t.name))}
-              >
-                <Icon size={16} className="mr-2" />
-                <span>{t.label}</span>
-                {isActive && (
-                  <span className="ml-auto text-xs text-(--color-primary)">
-                    Activo
-                  </span>
-                )}
+        {/* Navigation - Only on desktop */}
+        {!isMobile && (
+          <>
+            <CommandSeparator />
+            <CommandGroup heading="Navegacion">
+              <CommandItem onSelect={() => runCommand(() => router.push('/games'))}>
+                <Gamepad2 size={16} className="mr-2" />
+                <span>Ir a Juegos</span>
               </CommandItem>
-            );
-          })}
-        </CommandGroup>
-
-        <CommandSeparator />
-
-        {/* Navigation */}
-        <CommandGroup heading="Navegacion">
-          <CommandItem onSelect={() => runCommand(() => router.push('/games'))}>
-            <Gamepad2 size={16} className="mr-2" />
-            <span>Ir a Juegos</span>
-          </CommandItem>
-          {isAuthenticated && (
-            <>
-              {/* TODO: Implement global modal store to open these from command palette */}
-              <CommandItem
-                disabled
-                className="opacity-50"
-              >
-                <BarChart3 size={16} className="mr-2" />
-                <span>Mis Estadisticas</span>
-                <span className="ml-auto text-xs text-(--color-text-muted)">
-                  Pronto
-                </span>
-              </CommandItem>
-              <CommandItem
-                disabled
-                className="opacity-50"
-              >
-                <Trophy size={16} className="mr-2" />
-                <span>Ranking Global</span>
-                <span className="ml-auto text-xs text-(--color-text-muted)">
-                  Pronto
-                </span>
-              </CommandItem>
-            </>
-          )}
-        </CommandGroup>
+            </CommandGroup>
+          </>
+        )}
       </CommandList>
     </CommandDialog>
   );
