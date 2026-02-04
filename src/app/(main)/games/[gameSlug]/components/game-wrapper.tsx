@@ -3,10 +3,13 @@
 import { useRouter } from 'next/navigation';
 import { gameRegistry } from '@/features/games/registry';
 import { ErrorBoundary } from '@/components/error/ErrorBoundary';
+import { gameLogger } from '@/lib/utils/logger';
 
 // Register games
 import ticTacToeModule from '@/features/games/tic-tac-toe';
+import plinkoModule from '@/features/games/plinko';
 gameRegistry.register(ticTacToeModule);
+gameRegistry.register(plinkoModule);
 
 interface GameWrapperProps {
   gameSlug: string;
@@ -33,7 +36,7 @@ export function GameWrapper({ gameSlug }: GameWrapperProps) {
   return (
     <ErrorBoundary
       onError={(error) => {
-        console.error(`[${gameSlug}] Game error:`, error);
+        gameLogger.error(`[${gameSlug}] Game error:`, error);
       }}
     >
       <GameComponent

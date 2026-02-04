@@ -6,6 +6,7 @@ import { getClient } from '@/lib/supabase/client';
 import type { GameResult, Stats } from '../types';
 import type { InsertTables } from '@/types/supabase.types';
 import { validateGameStatsRow } from '@/lib/validators/database-rows';
+import { statsLogger } from '@/lib/utils/logger';
 
 // Properly typed insert for game_stats table
 type GameStatsInsert = InsertTables<'game_stats'>;
@@ -85,7 +86,7 @@ async function syncStatsToSupabase(
     }
     return true;
   } catch (err) {
-    console.error(`Error syncing stats (attempt ${retryCount + 1}):`, err);
+    statsLogger.error(`Error syncing stats (attempt ${retryCount + 1}):`, err);
 
     // Retry with exponential backoff
     if (retryCount < MAX_RETRY_ATTEMPTS) {
@@ -115,7 +116,7 @@ async function loadStatsFromSupabase(userId: string): Promise<Stats | null> {
         // No stats found, return null (will use local stats)
         return null;
       }
-      console.error('Error loading stats:', error);
+      statsLogger.error('Error loading stats:', error);
       return null;
     }
 
@@ -133,13 +134,13 @@ async function loadStatsFromSupabase(userId: string): Promise<Stats | null> {
           byOpponent: row.by_opponent,
         };
       } catch {
-        console.error('Invalid game stats data received');
+        statsLogger.error('Invalid game stats data received');
         return null;
       }
     }
     return null;
   } catch (err) {
-    console.error('Error loading stats:', err);
+    statsLogger.error('Error loading stats:', err);
     return null;
   }
 }
@@ -289,7 +290,7 @@ export const useStatsStore = create<StatsState>()(
             set({ isResetting: false });
             return success;
           } catch (err) {
-            console.error('Error resetting stats in Supabase:', err);
+            statsLogger.error('Error resetting stats in Supabase:', err);
             set({ isResetting: false });
             return false;
           }
@@ -311,7 +312,7 @@ export const useStatsStore = create<StatsState>()(
       onRehydrateStorage: () => {
         return (state, error) => {
           if (error) {
-            console.warn('Error rehydrating stats from localStorage:', error);
+            statsLogger.warn('Error rehydrating stats from localStorage:', error);
             // State will use initialStats as fallback
           }
         };
@@ -324,7 +325,7 @@ export const useStatsStore = create<StatsState>()(
             const value = localStorage.getItem(name);
             return value ? JSON.parse(value) : null;
           } catch (error) {
-            console.warn('Error reading from localStorage:', error);
+            statsLogger.warn('Error reading from localStorage:', error);
             return null;
           }
         },
@@ -333,7 +334,7 @@ export const useStatsStore = create<StatsState>()(
           try {
             localStorage.setItem(name, JSON.stringify(value));
           } catch (error) {
-            console.warn('Error writing to localStorage:', error);
+            statsLogger.warn('Error writing to localStorage:', error);
             // Silently fail - stats will still work in memory
           }
         },
@@ -342,13 +343,28 @@ export const useStatsStore = create<StatsState>()(
           try {
             localStorage.removeItem(name);
           } catch (error) {
-            console.warn('Error removing from localStorage:', error);
+            statsLogger.warn('Error removing from localStorage:', error);
           }
         },
       },
     }
   )
 );
+
+// Memoized selectors - use these to prevent unnecessary re-renders
+export const useStats = () => useStatsStore((state) => state.stats);
+export const useRecentGames = () => useStatsStore((state) => state.recentGames);
+export const useStatsUserId = () => useStatsStore((state) => state.userId);
+export const useStatsSyncing = () => useStatsStore((state) => state.isSyncing);
+export const useStatsHasPendingChanges = () => useStatsStore((state) => state.hasPendingChanges);
+export const useStatsActions = () => useStatsStore((state) => ({
+  recordGame: state.recordGame,
+  resetStats: state.resetStats,
+  setUserId: state.setUserId,
+  loadFromSupabase: state.loadFromSupabase,
+  syncToSupabase: state.syncToSupabase,
+  startPeriodicSync: state.startPeriodicSync,
+}));
 
 // Helper functions
 export function getWinRate(stats: Stats): number {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 
 type ModalState<T extends string> = Record<T, boolean>;
 
@@ -45,9 +45,14 @@ export function useModals<T extends string>(modalNames: readonly T[]): UseModals
 
   const [state, setState] = useState<ModalState<T>>(initialState);
 
+  // Use ref to always have access to latest state without recreating isOpen callback
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  // isOpen is stable - reads from ref, doesn't depend on state
   const isOpen = useCallback((modal: T): boolean => {
-    return state[modal] ?? false;
-  }, [state]);
+    return stateRef.current[modal] ?? false;
+  }, []);
 
   const open = useCallback((modal: T): void => {
     setState(prev => ({ ...prev, [modal]: true }));

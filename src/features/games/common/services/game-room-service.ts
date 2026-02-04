@@ -455,7 +455,7 @@ class GameRoomService {
 
     // Usar funcion RPC atomica para evitar race conditions
     // cuando 2 jugadores buscan partida simultaneamente
-    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    // @ts-expect-error - Supabase RPC types require CLI regeneration (supabase gen types)
     const { data, error } = await this.supabase.rpc('find_or_create_match', {
       p_player_id: playerId,
       p_game_type: gameType
@@ -495,7 +495,7 @@ class GameRoomService {
 
     matchmakingLog.log('Finding or creating match with bet for player:', playerId, 'amount:', betAmount);
 
-    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    // @ts-expect-error - Supabase RPC types require CLI regeneration (supabase gen types)
     const { data, error } = await this.supabase.rpc('find_or_create_match_with_bet', {
       p_player_id: playerId,
       p_game_type: gameType,
@@ -843,7 +843,7 @@ class GameRoomService {
 
     matchmakingLog.log('Finding match with negotiation for player:', playerId, 'wantsBet:', wantsBet, 'amount:', betAmount);
 
-    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    // @ts-expect-error - Supabase RPC types require CLI regeneration (supabase gen types)
     const { data, error } = await this.supabase.rpc('find_or_create_match_v2', {
       p_player_id: playerId,
       p_game_type: gameType,
@@ -920,7 +920,7 @@ class GameRoomService {
 
     log.log('Submitting bet proposal:', roomId, playerId, amount);
 
-    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    // @ts-expect-error - Supabase RPC types require CLI regeneration (supabase gen types)
     const { data, error } = await this.supabase.rpc('submit_bet_proposal', {
       p_room_id: roomId,
       p_player_id: playerId,
@@ -944,7 +944,7 @@ class GameRoomService {
 
     log.log('Accepting bet proposal:', roomId, playerId);
 
-    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    // @ts-expect-error - Supabase RPC types require CLI regeneration (supabase gen types)
     const { data, error } = await this.supabase.rpc('accept_bet_proposal', {
       p_room_id: roomId,
       p_player_id: playerId
@@ -967,7 +967,7 @@ class GameRoomService {
 
     log.log('Skipping betting:', roomId, playerId);
 
-    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    // @ts-expect-error - Supabase RPC types require CLI regeneration (supabase gen types)
     const { data, error } = await this.supabase.rpc('skip_betting', {
       p_room_id: roomId,
       p_player_id: playerId
@@ -987,7 +987,7 @@ class GameRoomService {
       return null;
     }
 
-    // @ts-expect-error - RPC function is defined in Supabase but not in generated types
+    // @ts-expect-error - Supabase RPC types require CLI regeneration (supabase gen types)
     const { data, error } = await this.supabase.rpc('check_negotiation_timeout', {
       p_room_id: roomId
     });

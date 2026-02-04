@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/types/supabase.types';
+import { proxyLogger } from '@/lib/utils/logger';
 
 /**
  * Next.js Proxy for Supabase session refresh.
@@ -42,7 +43,7 @@ export async function proxy(request: NextRequest) {
     if (error) {
       // Log auth errors but don't block the request
       // Common errors: invalid token, expired refresh token
-      console.warn('[Proxy] Auth error during token refresh:', error.message);
+      proxyLogger.warn('Auth error during token refresh:', error.message);
 
       // If it's an auth error, we should clear the invalid session cookies
       // The client will handle re-authentication
@@ -52,14 +53,9 @@ export async function proxy(request: NextRequest) {
         response.cookies.delete('sb-refresh-token');
       }
     }
-
-    // Optionally log successful auth for debugging
-    if (process.env.NODE_ENV === 'development' && user) {
-      // Uncomment for debugging: console.log('[Proxy] User authenticated:', user.id);
-    }
   } catch (err) {
     // Unexpected error - log but don't block request
-    console.error('[Proxy] Unexpected error during auth check:', err);
+    proxyLogger.error('Unexpected error during auth check:', err);
   }
 
   return response;

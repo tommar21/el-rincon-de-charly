@@ -197,6 +197,8 @@ export interface Database {
     Views: {
       [_ in never]: never;
     };
+    // NOTE: RPC functions are defined in Supabase but types require CLI regeneration
+    // Run `supabase gen types typescript` to update these
     Functions: {
       [_ in never]: never;
     };

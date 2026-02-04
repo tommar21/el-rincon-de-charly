@@ -12,8 +12,7 @@ import { useWalletStore } from '@/features/wallet/store/wallet-store';
 
 // Dynamic import for modals - reduces initial bundle
 const AuthModal = dynamic(() => import('@/features/auth').then(m => m.AuthModal), { ssr: false });
-import type { AIDifficulty, Player } from '../common/types/game.types';
-import type { GameProps, GameMode } from '../registry/types';
+import type { AIDifficulty, Player, GameProps, GameMode } from '../registry/types';
 import type { BetConfig } from '../common/hooks';
 import { createLogger } from '@/lib/utils/logger';
 

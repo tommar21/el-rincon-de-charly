@@ -187,8 +187,11 @@ export function BetNegotiationOverlay({
                             }
                           }}
                           disabled={!canAfford || isMyCurrentProposal}
+                          aria-label={`Proponer ${amount} créditos`}
+                          aria-pressed={isSelected}
                           className={cn(
                             'py-2 px-2 rounded-lg text-xs font-medium transition-all',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-warning) focus-visible:ring-offset-2',
                             isSelected
                               ? 'bg-(--color-warning) text-white ring-2 ring-(--color-warning) ring-offset-2 ring-offset-(--color-surface)'
                               : isMyCurrentProposal
@@ -226,10 +229,11 @@ export function BetNegotiationOverlay({
                           }
                         }}
                         placeholder="Otro monto..."
+                        aria-label="Monto de contra-propuesta personalizado"
                         className={cn(
                           'w-full pl-8 pr-3 py-2 rounded-lg text-xs font-medium',
                           'bg-(--color-background) border border-(--color-border)',
-                          'focus:outline-none focus:ring-2 focus:ring-(--color-warning) focus:border-transparent',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-warning) focus-visible:ring-offset-2',
                           'placeholder:text-(--color-text-muted)',
                           '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
                           customInput && selectedAmount && !BET_PRESETS.includes(selectedAmount)

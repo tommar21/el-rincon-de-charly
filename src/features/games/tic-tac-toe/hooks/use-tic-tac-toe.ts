@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { BoardState, CellValue, WinResult } from '../types';
-import type { GameMode, AIDifficulty, Player } from '../../common/types/game.types';
+import type { GameMode, AIDifficulty, Player } from '../../registry/types';
 import {
   createInitialBoard,
   makeMove,

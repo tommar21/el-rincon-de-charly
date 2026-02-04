@@ -334,7 +334,7 @@ export function Sidebar({ onSearchClick }: SidebarProps) {
                   'bg-(--color-background) border border-(--color-border)',
                   'text-sm text-(--color-text-subtle)',
                   'hover:border-(--color-primary) hover:bg-(--color-background-hover)',
-                  'focus:outline-none focus:border-(--color-primary) focus:ring-1 focus:ring-primary/20',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2',
                   'transition-all duration-200',
                   'cursor-pointer'
                 )}

@@ -1,3 +1,5 @@
+import { actionLogger } from '@/lib/utils/logger';
+
 /**
  * Standardized server action response type
  * Used across all server actions for consistent error handling
@@ -46,7 +48,7 @@ export async function safeAction<T>(
     const data = await fn();
     return successResponse(data);
   } catch (error) {
-    console.error('Action error:', error);
+    actionLogger.error('Action error:', error);
     return errorResponse(getErrorMessage(error));
   }
 }

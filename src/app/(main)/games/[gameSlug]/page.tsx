@@ -4,7 +4,9 @@ import { GameWrapper } from './components/game-wrapper';
 
 // Register games (ideally this should be in a central place)
 import ticTacToeModule from '@/features/games/tic-tac-toe';
+import plinkoModule from '@/features/games/plinko';
 gameRegistry.register(ticTacToeModule);
+gameRegistry.register(plinkoModule);
 
 interface GamePageProps {
   params: Promise<{

@@ -51,7 +51,7 @@ export const Cell = memo(function Cell({
         'aspect-square w-full',
         'bg-(--color-surface) rounded-xl',
         'transition-all duration-300',
-        'focus:outline-none focus:ring-2 focus:ring-(--color-primary)',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2',
         'min-h-[70px] sm:min-h-[100px] landscape:min-h-0',
         isClickable && [
           'cursor-pointer',

@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, Users, Globe, ArrowLeft, Zap, Star, UserPlus, Lock, Coins, ToggleLeft, ToggleRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils/cn';
 import { useWalletStore, formatBalance } from '@/features/wallet/store/wallet-store';
-import type { AIDifficulty } from '../../../common/types/game.types';
-import type { GameMode } from '../../../registry/types';
+import type { AIDifficulty, GameMode } from '../../../registry/types';
 import type { BetConfig } from '../../../common/hooks';
 
 // Bet presets
@@ -26,7 +25,7 @@ const DIFFICULTIES: {
 ];
 
 // Star rating component
-function StarRating({ count, max = 4, size = 10 }: { count: number; max?: number; size?: number }) {
+const StarRating = memo(function StarRating({ count, max = 4, size = 10 }: { count: number; max?: number; size?: number }) {
   return (
     <div className="flex gap-0.5">
       {Array.from({ length: max }).map((_, i) => (
@@ -41,7 +40,7 @@ function StarRating({ count, max = 4, size = 10 }: { count: number; max?: number
       ))}
     </div>
   );
-}
+});
 
 // Mode card component for grid
 interface ModeCardProps {
@@ -54,7 +53,7 @@ interface ModeCardProps {
   badge?: string;
 }
 
-function ModeCard({ icon, title, subtitle, onClick, variant = 'default', disabled, badge }: ModeCardProps) {
+const ModeCard = memo(function ModeCard({ icon, title, subtitle, onClick, variant = 'default', disabled, badge }: ModeCardProps) {
   const variantStyles = {
     default: 'border-(--color-border) hover:border-(--color-text-muted) hover:bg-(--color-surface-hover)',
     primary: 'border-(--color-primary)/50 bg-(--color-primary)/5 hover:bg-(--color-primary)/10 hover:border-(--color-primary)',
@@ -97,7 +96,7 @@ function ModeCard({ icon, title, subtitle, onClick, variant = 'default', disable
       </div>
     </button>
   );
-}
+});
 
 interface LocalGameConfig {
   mode: GameMode;
@@ -235,8 +234,11 @@ export function ModeSelection({
                 {/* Toggle */}
                 <button
                   onClick={handleToggleBet}
+                  aria-label={wantsToBet ? 'Desactivar apuesta' : 'Activar apuesta'}
+                  aria-pressed={wantsToBet}
                   className={cn(
                     'w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2',
                     wantsToBet
                       ? 'border-(--color-warning) bg-(--color-warning)/10'
                       : 'border-(--color-border) bg-(--color-surface) hover:border-(--color-text-muted)'
@@ -285,8 +287,11 @@ export function ModeSelection({
                                   }
                                 }}
                                 disabled={!canAfford}
+                                aria-label={`Apostar ${amount} créditos`}
+                                aria-pressed={isSelected}
                                 className={cn(
                                   'py-2 px-2 rounded-lg text-xs font-medium transition-all',
+                                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-warning) focus-visible:ring-offset-2',
                                   isSelected
                                     ? 'bg-(--color-warning) text-white'
                                     : canAfford
@@ -318,10 +323,11 @@ export function ModeSelection({
                                 }
                               }}
                               placeholder="Otro monto..."
+                              aria-label="Monto de apuesta personalizado"
                               className={cn(
                                 'w-full pl-8 pr-3 py-2 rounded-lg text-xs font-medium',
                                 'bg-(--color-surface) border border-(--color-border)',
-                                'focus:outline-none focus:ring-2 focus:ring-(--color-warning) focus:border-transparent',
+                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-warning) focus-visible:ring-offset-2',
                                 'placeholder:text-(--color-text-muted)',
                                 '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
                                 customBetInput && !BET_PRESETS.includes(betAmount)

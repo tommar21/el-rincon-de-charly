@@ -5,6 +5,7 @@ import { getClient } from '@/lib/supabase/client';
 import type { InsertTables, UpdateTables } from '@/types/supabase.types';
 import type { Wallet, WalletTransaction, WalletRow, WalletTransactionRow, TransactionType } from '../types';
 import { validateWalletRow, validateWalletTransactionRows } from '@/lib/validators/database-rows';
+import { walletLogger } from '@/lib/utils/logger';
 
 // Use Supabase generated types for database operations
 type WalletInsert = InsertTables<'wallets'>;
@@ -88,7 +89,7 @@ async function withWalletLock<T>(
   // Wait for pending operations with timeout
   while (pendingOperations.size > 0) {
     if (Date.now() - startTime > MAX_LOCK_WAIT_MS) {
-      console.error('[Wallet] Lock timeout, pending ops:', Array.from(pendingOperations));
+      walletLogger.error('[Wallet] Lock timeout, pending ops:', Array.from(pendingOperations));
       throw new Error('Wallet operation timeout - another operation is taking too long');
     }
     await new Promise(resolve => setTimeout(resolve, LOCK_CHECK_INTERVAL_MS));
@@ -230,7 +231,7 @@ async function executeWalletTransaction(
 
       return { success: true, newBalance };
     } catch (err) {
-      console.error(`Error in wallet transaction (${params.type}):`, err);
+      walletLogger.error(`Error in wallet transaction (${params.type}):`, err);
       set({ error: params.errorMessage });
       return { success: false };
     }
@@ -302,7 +303,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
                   return;
                 }
               }
-              console.error('Error creating wallet:', createError);
+              walletLogger.error('Error creating wallet:', createError);
               set({ error: 'Error al crear la billetera', isLoading: false });
               return;
             }
@@ -322,7 +323,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
           set({ wallet: rowToWallet(validateWalletRow(data, 'loadWallet')), isLoading: false });
         }
       } catch (err) {
-        console.error('Error loading wallet:', err);
+        walletLogger.error('Error loading wallet:', err);
         set({ error: 'Error al cargar la billetera', isLoading: false });
       } finally {
         walletLoadPromise = null;
@@ -359,7 +360,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         });
       }
     } catch (err) {
-      console.error('Error loading transactions:', err);
+      walletLogger.error('Error loading transactions:', err);
     }
   },
 
@@ -399,7 +400,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         });
       }
     } catch (err) {
-      console.error('Error loading more transactions:', err);
+      walletLogger.error('Error loading more transactions:', err);
       set({ isLoadingMore: false });
     }
   },
@@ -476,6 +477,22 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       error: null,
     });
   },
+}));
+
+// Memoized selectors - use these to prevent unnecessary re-renders
+export const useWallet = () => useWalletStore((state) => state.wallet);
+export const useWalletBalance = () => useWalletStore((state) => state.wallet?.balance ?? 0);
+export const useWalletTransactions = () => useWalletStore((state) => state.transactions);
+export const useWalletLoading = () => useWalletStore((state) => state.isLoading);
+export const useWalletError = () => useWalletStore((state) => state.error);
+export const useWalletActions = () => useWalletStore((state) => ({
+  loadWallet: state.loadWallet,
+  loadTransactions: state.loadTransactions,
+  loadMoreTransactions: state.loadMoreTransactions,
+  placeBet: state.placeBet,
+  recordWin: state.recordWin,
+  addCredits: state.addCredits,
+  reset: state.reset,
 }));
 
 // Format balance for display

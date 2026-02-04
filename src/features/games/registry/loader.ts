@@ -15,12 +15,13 @@ export async function loadGames(): Promise<void> {
   const ticTacToe = await import('../tic-tac-toe');
   gameRegistry.register(ticTacToe.default);
 
+  // Plinko
+  const plinko = await import('../plinko');
+  gameRegistry.register(plinko.default);
+
   // Add more games here as they are implemented:
   // const connectFour = await import('../connect-four');
   // gameRegistry.register(connectFour.default);
-
-  // const plinko = await import('../plinko');
-  // gameRegistry.register(plinko.default);
 
   // const chess = await import('../chess');
   // gameRegistry.register(chess.default);

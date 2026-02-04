@@ -5,6 +5,8 @@
 
 import type { WalletRow, WalletTransactionRow, TransactionType } from '@/features/wallet/types';
 import type { GameStatsRow } from '@/features/profile/types';
+import type { Profile } from '@/features/auth/types';
+import { validatorLogger } from '@/lib/utils/logger';
 
 // Valid transaction types for validation
 const VALID_TRANSACTION_TYPES: TransactionType[] = [
@@ -34,7 +36,7 @@ export function isWalletRow(data: unknown): data is WalletRow {
  */
 export function validateWalletRow(data: unknown, context?: string): WalletRow {
   if (!isWalletRow(data)) {
-    console.error('Invalid wallet row data:', data, 'Context:', context);
+    validatorLogger.error('Invalid wallet row data:', data, 'Context:', context);
     throw new Error(`Invalid wallet data${context ? ` in ${context}` : ''}`);
   }
 
@@ -71,7 +73,7 @@ export function isWalletTransactionRow(data: unknown): data is WalletTransaction
  */
 export function validateWalletTransactionRow(data: unknown, context?: string): WalletTransactionRow {
   if (!isWalletTransactionRow(data)) {
-    console.error('Invalid wallet transaction row data:', data, 'Context:', context);
+    validatorLogger.error('Invalid wallet transaction row data:', data, 'Context:', context);
     throw new Error(`Invalid wallet transaction data${context ? ` in ${context}` : ''}`);
   }
 
@@ -113,7 +115,7 @@ export function isGameStatsRow(data: unknown): data is GameStatsRow {
  */
 export function validateGameStatsRow(data: unknown, context?: string): GameStatsRow {
   if (!isGameStatsRow(data)) {
-    console.error('Invalid game stats row data:', data, 'Context:', context);
+    validatorLogger.error('Invalid game stats row data:', data, 'Context:', context);
     throw new Error(`Invalid game stats data${context ? ` in ${context}` : ''}`);
   }
 
@@ -141,4 +143,58 @@ export function validateWalletTransactionRows(data: unknown[]): WalletTransactio
   return data.map((item, index) =>
     validateWalletTransactionRow(item, `transaction[${index}]`)
   );
+}
+
+/**
+ * Type guard for Profile database row.
+ * Note: The profiles table only has id, username, avatar_url, created_at, updated_at.
+ * The games_played, games_won, win_rate fields are computed from game_stats.
+ */
+export function isProfileRow(data: unknown): boolean {
+  if (!data || typeof data !== 'object') return false;
+
+  const row = data as Record<string, unknown>;
+
+  // Check for empty object (Supabase sometimes returns {} instead of null)
+  if (Object.keys(row).length === 0) return false;
+
+  // Only check fields that exist in the profiles table
+  return (
+    typeof row.id === 'string' &&
+    (row.username === null || typeof row.username === 'string') &&
+    (row.avatar_url === null || typeof row.avatar_url === 'string')
+  );
+}
+
+/**
+ * Validates and returns a Profile with default values for computed fields.
+ * The database only stores id, username, avatar_url - game stats are computed separately.
+ */
+export function validateProfile(data: unknown, context?: string): Profile {
+  if (!isProfileRow(data)) {
+    validatorLogger.error('Invalid profile data:', data, 'Context:', context);
+    throw new Error(`Invalid profile data${context ? ` in ${context}` : ''}`);
+  }
+
+  const row = data as Record<string, unknown>;
+
+  return {
+    id: row.id as string,
+    username: (row.username as string | null) ?? null,
+    avatar_url: (row.avatar_url as string | null) ?? null,
+    // Default values for computed fields (populated from game_stats elsewhere)
+    games_played: typeof row.games_played === 'number' ? row.games_played : 0,
+    games_won: typeof row.games_won === 'number' ? row.games_won : 0,
+    win_rate: typeof row.win_rate === 'number' ? row.win_rate : 0,
+    created_at: typeof row.created_at === 'string' ? row.created_at : undefined,
+    updated_at: typeof row.updated_at === 'string' ? row.updated_at : undefined,
+  };
+}
+
+/**
+ * Legacy type guard - kept for backward compatibility
+ * @deprecated Use isProfileRow instead
+ */
+export function isProfile(data: unknown): data is Profile {
+  return isProfileRow(data);
 }

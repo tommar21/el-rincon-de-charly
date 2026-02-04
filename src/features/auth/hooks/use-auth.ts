@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useMemo } from 'react';
 import { getClient } from '@/lib/supabase/client';
 import { useAuthStore } from '../store/auth-store';
+import { validateProfile, isProfile } from '@/lib/validators/database-rows';
 import type { Profile } from '../types';
+import { authLogger } from '@/lib/utils/logger';
 
 export function useAuth() {
   const {
@@ -49,7 +51,7 @@ export function useAuth() {
       if (error) {
         // PGRST116 = no rows found - profile might not exist yet (trigger delay)
         if (error.code === 'PGRST116') {
-          console.warn('Profile not found for user:', userId);
+          authLogger.warn('Profile not found for user:', userId);
           // Retry once after short delay (trigger might be slow)
           await new Promise(resolve => setTimeout(resolve, 500));
           const { data: retryData, error: retryError } = await supabase
@@ -59,18 +61,30 @@ export function useAuth() {
             .single();
 
           if (!retryError && retryData && currentProfileFetchRef.current === fetchId) {
-            setProfile(retryData as Profile);
-            return retryData as Profile;
+            try {
+              const validatedProfile = validateProfile(retryData, 'fetchProfile retry');
+              setProfile(validatedProfile);
+              return validatedProfile;
+            } catch (validationError) {
+              authLogger.error('Profile validation failed:', validationError);
+              return null;
+            }
           }
         }
-        console.error('Error fetching profile:', error);
+        authLogger.error('Error fetching profile:', error);
         return null;
       }
 
-      setProfile(data as Profile);
-      return data as Profile;
+      try {
+        const validatedProfile = validateProfile(data, 'fetchProfile');
+        setProfile(validatedProfile);
+        return validatedProfile;
+      } catch (validationError) {
+        authLogger.error('Profile validation failed:', validationError);
+        return null;
+      }
     } catch (err) {
-      console.error('Unexpected error fetching profile:', err);
+      authLogger.error('Unexpected error fetching profile:', err);
       return null;
     }
   }, [supabase, setProfile]);
@@ -145,7 +159,12 @@ export function useAuth() {
       .single();
 
     if (!error && data) {
-      setProfile(data as Profile);
+      try {
+        const validatedProfile = validateProfile(data, 'updateProfile');
+        setProfile(validatedProfile);
+      } catch (validationError) {
+        authLogger.error('Profile validation failed after update:', validationError);
+      }
     }
 
     return { data, error };
@@ -172,7 +191,7 @@ export function useAuth() {
         // Ignore SIGNED_OUT if we're in the middle of a session refresh
         // This prevents false logouts during token refresh when opening shared links
         if (event === 'SIGNED_OUT' && isRefreshingSessionRef.current) {
-          console.debug('[Auth] Ignoring SIGNED_OUT during session refresh');
+          authLogger.debug('[Auth] Ignoring SIGNED_OUT during session refresh');
           return;
         }
 
@@ -192,7 +211,7 @@ export function useAuth() {
         try {
           await fetchProfileRef.current(newSession.user.id);
         } catch (err) {
-          console.error('Error fetching profile in auth listener:', err);
+          authLogger.error('Error fetching profile in auth listener:', err);
           // Don't crash the listener, just log
         }
       }
@@ -232,11 +251,11 @@ export function useAuth() {
           try {
             await fetchProfileRef.current(authSession.user.id);
           } catch (err) {
-            console.error('Error fetching initial profile:', err);
+            authLogger.error('Error fetching initial profile:', err);
           }
         }
       } catch (error) {
-        console.error('Error initializing session:', error);
+        authLogger.error('Error initializing session:', error);
         if (mounted) {
           reset();
         }

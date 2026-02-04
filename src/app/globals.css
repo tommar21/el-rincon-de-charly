@@ -127,7 +127,7 @@
   /* Text */
   --color-text: #F5F5F7;
   --color-text-muted: #AFAFB8; /* Improved contrast ratio for WCAG AA */
-  --color-text-subtle: #7A7A84; /* Improved contrast ratio */
+  --color-text-subtle: #9A9AA4; /* WCAG AA compliant (4.5:1 ratio) */
 
   /* States */
   --color-success: #22C55E;
@@ -244,7 +244,7 @@
   /* Text */
   --color-text: #F1F5F9;
   --color-text-muted: #94A3B8;
-  --color-text-subtle: #64748B;
+  --color-text-subtle: #8899AA; /* WCAG AA compliant */
 
   /* States - same */
   --color-success: #22C55E;
@@ -317,7 +317,7 @@
   /* Text */
   --color-text: #FFFFFF;
   --color-text-muted: #8888AA;
-  --color-text-subtle: #5555777;
+  --color-text-subtle: #9999BB; /* WCAG AA compliant */
 
   /* States */
   --color-success: #00FF88;
@@ -587,4 +587,16 @@ body {
   .safe-right {
     padding-right: env(safe-area-inset-right);
   }
+}
+
+/* ============================================
+   SCROLLBAR UTILITIES
+   ============================================ */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

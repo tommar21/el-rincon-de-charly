@@ -204,7 +204,7 @@ export function AuthModal({ isOpen, onClose, message }: AuthModalProps) {
                         'w-full pl-12 pr-4 py-3 rounded-xl',
                         'bg-(--color-background) border border-(--color-border)',
                         'text-sm text-(--color-text) placeholder:text-(--color-text-subtle)',
-                        'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2',
                         'transition-all duration-200'
                       )}
                       required
@@ -226,7 +226,7 @@ export function AuthModal({ isOpen, onClose, message }: AuthModalProps) {
                       'w-full pl-12 pr-4 py-3 rounded-xl',
                       'bg-(--color-background) border border-(--color-border)',
                       'text-sm text-(--color-text) placeholder:text-(--color-text-subtle)',
-                      'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2',
                       'transition-all duration-200'
                     )}
                     required
@@ -247,7 +247,7 @@ export function AuthModal({ isOpen, onClose, message }: AuthModalProps) {
                       'w-full pl-12 pr-12 py-3 rounded-xl',
                       'bg-(--color-background) border border-(--color-border)',
                       'text-sm text-(--color-text) placeholder:text-(--color-text-subtle)',
-                      'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2',
                       'transition-all duration-200'
                     )}
                     required
@@ -256,7 +256,8 @@ export function AuthModal({ isOpen, onClose, message }: AuthModalProps) {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-(--color-text-subtle) hover:text-(--color-text) transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-(--color-text-subtle) hover:text-(--color-text) transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2"
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -300,7 +301,7 @@ export function AuthModal({ isOpen, onClose, message }: AuthModalProps) {
                           setMode('register');
                           setError(null);
                         }}
-                        className="text-(--color-primary) hover:underline font-medium"
+                        className="text-(--color-primary) hover:underline font-medium rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2"
                       >
                         Registrate
                       </button>
@@ -313,7 +314,7 @@ export function AuthModal({ isOpen, onClose, message }: AuthModalProps) {
                           setMode('login');
                           setError(null);
                         }}
-                        className="text-(--color-primary) hover:underline font-medium"
+                        className="text-(--color-primary) hover:underline font-medium rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2"
                       >
                         Inicia sesion
                       </button>

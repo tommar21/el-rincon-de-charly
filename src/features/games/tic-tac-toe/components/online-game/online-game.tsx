@@ -6,6 +6,7 @@ import { RotateCcw, ArrowLeft, Globe, Loader2, LogOut, Copy, Check, X, Wifi, Wif
 import { Board } from '../board';
 import { BetNegotiationOverlay } from '../bet-negotiation-overlay';
 import { Button } from '@/components/ui/button';
+import { gameLogger } from '@/lib/utils/logger';
 import {
   Modal,
   ModalContent,
@@ -101,7 +102,7 @@ export function OnlineGame({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy link:', err);
+      gameLogger.error('Failed to copy link:', err);
     }
   };
 

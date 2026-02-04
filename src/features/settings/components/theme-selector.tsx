@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback } from 'react';
 import { ChevronUp, Check } from 'lucide-react';
 import { useTheme } from '@/components/client/theme-provider';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils/cn';
 import { AVAILABLE_THEMES, getThemeById } from '@/lib/theme/themes';
+import type { Theme } from '@/components/client/theme-provider';
 
 interface ThemeSelectorProps {
   className?: string;
@@ -20,6 +22,10 @@ interface ThemeSelectorProps {
 
 export function ThemeSelector({ className, compact = false }: ThemeSelectorProps) {
   const { theme, setTheme } = useTheme();
+
+  const handleThemeChange = useCallback((themeId: Theme) => {
+    setTheme(themeId);
+  }, [setTheme]);
 
   const currentTheme = getThemeById(theme);
   const CurrentIcon = currentTheme.icon;
@@ -79,7 +85,7 @@ export function ThemeSelector({ className, compact = false }: ThemeSelectorProps
           return (
             <DropdownMenuItem
               key={t.id}
-              onClick={() => setTheme(t.id)}
+              onClick={() => handleThemeChange(t.id)}
               className={cn(
                 'gap-3 py-2.5 cursor-pointer',
                 isActive && 'bg-primary/10'

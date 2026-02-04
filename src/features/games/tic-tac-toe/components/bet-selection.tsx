@@ -148,9 +148,12 @@ export function BetSelectionModal({
                     key={amount}
                     onClick={() => canAfford && handlePresetClick(amount)}
                     disabled={!canAfford}
+                    aria-label={`Apostar ${amount} créditos`}
+                    aria-pressed={isSelected}
                     className={cn(
                       'py-3 px-4 rounded-lg text-sm font-medium transition-all',
                       'border-2',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2',
                       isSelected
                         ? 'bg-(--color-primary) border-(--color-primary) text-white'
                         : canAfford
@@ -180,15 +183,17 @@ export function BetSelectionModal({
                 value={customAmount}
                 onChange={handleCustomChange}
                 placeholder={`${BET_CONFIG.MIN_BET} - ${BET_CONFIG.MAX_BET}`}
+                aria-label="Monto de apuesta personalizado"
                 className={cn(
                   'w-full py-3 pl-8 pr-4 rounded-lg text-sm',
                   'bg-(--color-surface) border-2 transition-colors',
                   'placeholder:text-(--color-text-subtle)',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-primary) focus-visible:ring-offset-2',
                   useCustom && customAmount
                     ? isValidAmount
                       ? 'border-(--color-primary) text-(--color-text)'
                       : 'border-(--color-error) text-(--color-text)'
-                    : 'border-(--color-border) text-(--color-text) focus:border-(--color-primary)'
+                    : 'border-(--color-border) text-(--color-text)'
                 )}
               />
             </div>

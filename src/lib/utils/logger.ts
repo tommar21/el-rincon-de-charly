@@ -38,6 +38,12 @@ export const realtimeLogger = createLogger({ prefix: 'Realtime' });
 export const matchmakingLogger = createLogger({ prefix: 'Matchmaking' });
 export const walletLogger = createLogger({ prefix: 'Wallet' });
 export const authLogger = createLogger({ prefix: 'Auth' });
+export const proxyLogger = createLogger({ prefix: 'Proxy' });
+export const statsLogger = createLogger({ prefix: 'Stats' });
+export const validatorLogger = createLogger({ prefix: 'Validator' });
+export const leaderboardLogger = createLogger({ prefix: 'Leaderboard' });
+export const actionLogger = createLogger({ prefix: 'Action' });
+export const errorBoundaryLogger = createLogger({ prefix: 'ErrorBoundary', enabled: true }); // Always log errors
 
 // Default logger without prefix
 export const logger = createLogger();

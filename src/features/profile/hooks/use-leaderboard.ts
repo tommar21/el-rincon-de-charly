@@ -2,83 +2,67 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getClient } from '@/lib/supabase/client';
+import { createCache, cacheKey } from '@/lib/utils/cache';
 import type { LeaderboardEntry } from '../types';
+import { leaderboardLogger } from '@/lib/utils/logger';
+
+// Type for the raw leaderboard row from Supabase
+interface LeaderboardRow {
+  user_id: string;
+  games_won: number | null;
+  games_played: number | null;
+  profiles: {
+    id: string;
+    username: string | null;
+    avatar_url: string | null;
+  } | null;
+}
+
+// Validate and transform a single leaderboard row
+function validateAndTransformRow(item: unknown, index: number): LeaderboardEntry | null {
+  if (!item || typeof item !== 'object') {
+    leaderboardLogger.warn(`Invalid leaderboard row at index ${index}:`, item);
+    return null;
+  }
+
+  const row = item as Record<string, unknown>;
+
+  // Validate required fields
+  if (typeof row.user_id !== 'string') {
+    leaderboardLogger.warn(`Missing user_id in leaderboard row ${index}`);
+    return null;
+  }
+
+  // Handle profile data (can be null from left join)
+  const profiles = row.profiles as LeaderboardRow['profiles'];
+  const gamesWon = typeof row.games_won === 'number' ? row.games_won : 0;
+  const gamesPlayed = typeof row.games_played === 'number' ? row.games_played : 0;
+
+  return {
+    id: profiles?.id || row.user_id,
+    username: profiles?.username || 'Jugador',
+    avatarUrl: profiles?.avatar_url || undefined,
+    gamesWon,
+    gamesPlayed,
+    winRate: gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0,
+    rank: index + 1,
+  };
+}
 
 interface UseLeaderboardOptions {
   limit?: number;
   gameType?: string;
 }
 
-// Cache configuration
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
-const MAX_CACHE_ENTRIES = 20; // Maximum number of cache entries
-
-interface CacheEntry {
-  data: LeaderboardEntry[];
-  timestamp: number;
-}
-
-// In-memory cache (shared across hook instances)
-const leaderboardCache = new Map<string, CacheEntry>();
-
-function getCacheKey(gameType: string, limit: number): string {
-  return `${gameType}:${limit}`;
-}
-
-// Clean up stale entries to prevent memory leak
-function cleanupStaleEntries(): void {
-  const now = Date.now();
-  for (const [key, entry] of leaderboardCache.entries()) {
-    if (now - entry.timestamp > CACHE_TTL) {
-      leaderboardCache.delete(key);
-    }
-  }
-}
-
-// Enforce max cache size (LRU-style: remove oldest entries)
-function enforceMaxCacheSize(): void {
-  if (leaderboardCache.size <= MAX_CACHE_ENTRIES) return;
-
-  // Convert to array and sort by timestamp (oldest first)
-  const entries = Array.from(leaderboardCache.entries())
-    .sort((a, b) => a[1].timestamp - b[1].timestamp);
-
-  // Remove oldest entries until we're under the limit
-  const entriesToRemove = entries.slice(0, leaderboardCache.size - MAX_CACHE_ENTRIES);
-  for (const [key] of entriesToRemove) {
-    leaderboardCache.delete(key);
-  }
-}
-
-function getFromCache(key: string): LeaderboardEntry[] | null {
-  const entry = leaderboardCache.get(key);
-  if (!entry) return null;
-
-  const isStale = Date.now() - entry.timestamp > CACHE_TTL;
-  if (isStale) {
-    leaderboardCache.delete(key);
-    return null;
-  }
-
-  return entry.data;
-}
-
-function setCache(key: string, data: LeaderboardEntry[]): void {
-  // Clean up stale entries before adding new ones
-  cleanupStaleEntries();
-
-  leaderboardCache.set(key, {
-    data,
-    timestamp: Date.now(),
-  });
-
-  // Enforce max cache size
-  enforceMaxCacheSize();
-}
+// Shared cache instance for leaderboard data
+const leaderboardCache = createCache<LeaderboardEntry[]>({
+  ttl: 5 * 60 * 1000, // 5 minutes
+  maxSize: 20,
+});
 
 export function useLeaderboard({ limit = 10, gameType = 'tic-tac-toe' }: UseLeaderboardOptions = {}) {
-  const cacheKey = getCacheKey(gameType, limit);
-  const cachedData = getFromCache(cacheKey);
+  const key = cacheKey('leaderboard', gameType, limit);
+  const cachedData = leaderboardCache.get(key);
 
   const [entries, setEntries] = useState<LeaderboardEntry[]>(cachedData || []);
   const [isLoading, setIsLoading] = useState(!cachedData);
@@ -90,11 +74,11 @@ export function useLeaderboard({ limit = 10, gameType = 'tic-tac-toe' }: UseLead
 
   const fetchLeaderboard = useCallback(async (forceRefresh = false) => {
     const supabase = getClient();
-    const currentCacheKey = getCacheKey(gameType, limit);
+    const currentKey = cacheKey('leaderboard', gameType, limit);
 
     // Check cache first (unless forcing refresh)
     if (!forceRefresh) {
-      const cached = getFromCache(currentCacheKey);
+      const cached = leaderboardCache.get(currentKey);
       if (cached) {
         setEntries(cached);
         setIsLoading(false);
@@ -108,7 +92,7 @@ export function useLeaderboard({ limit = 10, gameType = 'tic-tac-toe' }: UseLead
       abortControllerRef.current.abort();
     }
 
-    if (!getFromCache(currentCacheKey) || forceRefresh) {
+    if (!leaderboardCache.has(currentKey) || forceRefresh) {
       setIsLoading(true);
     }
     setError(null);
@@ -160,40 +144,27 @@ export function useLeaderboard({ limit = 10, gameType = 'tic-tac-toe' }: UseLead
       }
 
       if (data) {
-        const leaderboard: LeaderboardEntry[] = data.map((item: Record<string, unknown>, index: number) => {
-          // Handle case where profile might be null (left join)
-          const profiles = item.profiles as { id: string; username: string | null; avatar_url: string | null } | null;
-          return {
-            id: profiles?.id || (item.user_id as string),
-            username: profiles?.username || 'Jugador',
-            avatarUrl: profiles?.avatar_url || undefined,
-            gamesWon: (item.games_won as number) || 0,
-            gamesPlayed: (item.games_played as number) || 0,
-            winRate: (item.games_played as number) > 0
-              ? Math.round(((item.games_won as number) / (item.games_played as number)) * 100)
-              : 0,
-            rank: index + 1,
-          };
-        });
+        // Validate and transform each row, filtering out invalid entries
+        const leaderboard = data
+          .map((item, index) => validateAndTransformRow(item, index))
+          .filter((entry): entry is LeaderboardEntry => entry !== null);
 
         // Update cache
-        setCache(currentCacheKey, leaderboard);
+        leaderboardCache.set(currentKey, leaderboard);
         setEntries(leaderboard);
       }
     } catch (err: unknown) {
       // Handle abort/timeout
       if (err instanceof Error && err.name === 'AbortError') {
         // Keep existing data on abort if we have cache
-        const cached = getFromCache(currentCacheKey);
-        if (!cached) {
+        if (!leaderboardCache.has(currentKey)) {
           setEntries([]);
         }
       } else {
-        console.error('Error fetching leaderboard:', err);
+        leaderboardLogger.error('Error fetching leaderboard:', err);
         setError('Error al cargar el ranking');
         // Keep existing cache data on error
-        const cached = getFromCache(currentCacheKey);
-        if (!cached) {
+        if (!leaderboardCache.has(currentKey)) {
           setEntries([]);
         }
       }

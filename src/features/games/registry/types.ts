@@ -16,6 +16,17 @@ export type GameMode = 'local' | 'ai' | 'online' | 'betting';
 export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'impossible';
 
 /**
+ * Player interface for game participants
+ */
+export interface Player {
+  id: string;
+  name: string;
+  avatar?: string;
+  isAI: boolean;
+  difficulty?: AIDifficulty;
+}
+
+/**
  * Game configuration - defines the game's capabilities and metadata
  */
 export interface GameConfig {
