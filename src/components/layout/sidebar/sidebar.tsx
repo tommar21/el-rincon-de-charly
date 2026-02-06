@@ -60,11 +60,12 @@ export function Sidebar({ onSearchClick }: SidebarProps) {
 
   // Prevent hydration mismatch
   useEffect(() => {
-    setMounted(true);
+    setMounted(true);  
   }, []);
 
   // Use ref for toggle to avoid re-adding event listener on every render
   const toggleRef = useRef(toggle);
+  // eslint-disable-next-line react-hooks/refs -- intentional pattern to keep ref in sync without re-creating effect
   toggleRef.current = toggle;
 
   // Keyboard shortcut: Ctrl/Cmd + B - only adds listener once

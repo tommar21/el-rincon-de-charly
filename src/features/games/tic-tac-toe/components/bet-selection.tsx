@@ -42,9 +42,9 @@ export function BetSelectionModal({
   // Reset form state when modal closes
   useEffect(() => {
     if (!isOpen) {
-      setSelectedAmount(BET_CONFIG.PRESETS[0]);
-      setCustomAmount('');
-      setUseCustom(false);
+      setSelectedAmount(BET_CONFIG.PRESETS[0]); // eslint-disable-line react-hooks/set-state-in-effect -- reset on modal close
+      setCustomAmount('');  
+      setUseCustom(false);  
     }
   }, [isOpen]);
 

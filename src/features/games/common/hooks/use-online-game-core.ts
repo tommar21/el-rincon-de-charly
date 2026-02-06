@@ -7,6 +7,12 @@ import { createLogger } from '@/lib/utils/logger';
 
 const log = createLogger({ prefix: 'OnlineGameCore' });
 
+// Timeout constants for search states
+const SEARCH_TIMEOUT_MS = 60000;      // 60s for searching
+const WAITING_TIMEOUT_MS = 120000;    // 2min for waiting (private rooms)
+const NEGOTIATION_TIMEOUT_MS = 35000; // 35s for negotiating
+const MAX_POLL_FAILURES = 5;          // Circuit breaker for polling
+
 export type OnlineGameStatus = 'idle' | 'searching' | 'waiting' | 'negotiating' | 'playing' | 'finished';
 
 export type { NegotiationState, BetConfig };
@@ -102,10 +108,16 @@ export function useOnlineGameCore({
   const betAmountRef = useRef(betAmount);
   betAmountRef.current = betAmount;
   const betDeductedForRoomRef = useRef<string | null>(null); // Track which room we've deducted bet for
+  const pollFailureCountRef = useRef(0); // Circuit breaker for polling
+  const isCleaningUpRef = useRef(false); // Guard against multiple cleanup calls
   const onRoomUpdateRef = useRef(onRoomUpdate);
   onRoomUpdateRef.current = onRoomUpdate;
   const onGameFinishedRef = useRef(onGameFinished);
   onGameFinishedRef.current = onGameFinished;
+
+  // Refs for circular dependencies between callbacks
+  const handleRematchAcceptedRef = useRef<((newRoomId: string) => Promise<void>) | undefined>(undefined);
+  const subscribeToRoomRef = useRef<((roomId: string) => void) | undefined>(undefined);
 
   // Wrapper to track status changes
   const setStatus = useCallback((newStatus: OnlineGameStatus) => {
@@ -113,13 +125,25 @@ export function useOnlineGameCore({
     onStatusChange?.(newStatus);
   }, [onStatusChange]);
 
-  // Cleanup helper
+  // Cleanup helper with guard against multiple calls
   const cleanupSubscription = useCallback(() => {
-    if (unsubscribeRef.current) {
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
+    if (isCleaningUpRef.current) {
+      log.log('Cleanup already in progress, skipping');
+      return;
     }
-    setConnectionStatus('disconnected');
+
+    isCleaningUpRef.current = true;
+    try {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    } catch (err) {
+      log.error('Error during cleanup:', err);
+    } finally {
+      setConnectionStatus('disconnected');
+      isCleaningUpRef.current = false;
+    }
   }, []);
 
   // Connection status handler
@@ -237,7 +261,7 @@ export function useOnlineGameCore({
       const wasRequested = rematchStatusRef.current === 'requested';
       if (updatedRoom.rematch_room_id && wasRequested) {
         log.log('Rematch accepted! Joining new room:', updatedRoom.rematch_room_id);
-        handleRematchAccepted(updatedRoom.rematch_room_id);
+        handleRematchAcceptedRef.current?.(updatedRoom.rematch_room_id);
         return;
       }
 
@@ -262,9 +286,10 @@ export function useOnlineGameCore({
       setStatus('playing');
       setError(null);
       setRematchStatus('none');
-      subscribeToRoom(newRoomId);
+      subscribeToRoomRef.current?.(newRoomId);
     }
   }, [cleanupSubscription, setStatus]);
+  handleRematchAcceptedRef.current = handleRematchAccepted;
 
   // Subscribe to room updates
   const subscribeToRoom = useCallback((roomId: string) => {
@@ -275,6 +300,7 @@ export function useOnlineGameCore({
       handleConnectionStatus
     );
   }, [handleRoomUpdate, handleSubscriptionError, handleConnectionStatus]);
+  subscribeToRoomRef.current = subscribeToRoom;
 
   // Initialize game room helper
   const initializeGameRoom = useCallback(async (
@@ -517,10 +543,11 @@ export function useOnlineGameCore({
     }
   }, [userId, initializeGameRoom, cleanupSubscription, setStatus]);
 
-  // Leave game
+  // Leave game with retry logic
   const leaveGame = useCallback(async () => {
     const currentBetAmount = betAmountRef.current;
     const currentStatus = statusRef.current;
+    const currentRoom = room;
 
     // Refund bet if leaving before game started
     if (currentBetAmount && currentBetAmount > 0 && (currentStatus === 'searching' || currentStatus === 'waiting')) {
@@ -533,18 +560,38 @@ export function useOnlineGameCore({
       }
     }
 
+    // Always cleanup subscription first (this always works locally)
     cleanupSubscription();
 
-    if (room) {
-      await gameRoomService.leaveRoom(room.id, userId);
+    // Try to leave room on server with retry logic
+    if (currentRoom) {
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          const success = await gameRoomService.leaveRoom(currentRoom.id, userId);
+          if (success) {
+            log.log('Successfully left room');
+            break;
+          }
+          log.warn(`leaveRoom failed, retries left: ${retries - 1}`);
+        } catch (err) {
+          log.error('Error leaving room:', err);
+        }
+        retries--;
+        if (retries > 0) {
+          await new Promise(r => setTimeout(r, 500)); // Wait before retry
+        }
+      }
     }
 
+    // Reset state regardless of server response
     setRoom(null);
     setStatus('idle');
     setError(null);
     setRematchStatus('none');
     setBetAmount(null);
     betDeductedForRoomRef.current = null; // Reset bet tracking
+    pollFailureCountRef.current = 0; // Reset poll failure count
   }, [room, userId, gameType, cleanupSubscription, setStatus]);
 
   // Update room (for game-specific updates)
@@ -750,7 +797,133 @@ export function useOnlineGameCore({
       log.log('Stopping polling');
       clearInterval(pollInterval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- room?.id is intentional to avoid restarting polling on every room update
   }, [status, room?.id, connectionStatus, setStatus]);
+
+  // Timeout for 'searching' state
+  useEffect(() => {
+    if (status !== 'searching') return;
+
+    log.log('Starting search timeout timer');
+    const timeoutId = setTimeout(() => {
+      log.warn('Search timeout reached');
+      setError('No se encontro oponente. Intenta de nuevo.');
+      cleanupSubscription();
+      setStatus('idle');
+    }, SEARCH_TIMEOUT_MS);
+
+    return () => clearTimeout(timeoutId);
+  }, [status, cleanupSubscription, setStatus]);
+
+  // Timeout for 'waiting' state (private room max wait)
+  useEffect(() => {
+    if (status !== 'waiting') return;
+
+    log.log('Starting waiting timeout timer');
+    const timeoutId = setTimeout(async () => {
+      log.warn('Waiting timeout reached');
+      setError('Tiempo de espera agotado. La sala ha expirado.');
+      cleanupSubscription();
+      if (room) {
+        try {
+          await gameRoomService.leaveRoom(room.id, userIdRef.current);
+        } catch (err) {
+          log.error('Error leaving room on timeout:', err);
+        }
+      }
+      setRoom(null);
+      setStatus('idle');
+    }, WAITING_TIMEOUT_MS);
+
+    return () => clearTimeout(timeoutId);
+  }, [status, room, cleanupSubscription, setStatus]);
+
+  // Timeout for 'negotiating' state with server-side check
+  useEffect(() => {
+    if (status !== 'negotiating' || !room) return;
+
+    log.log('Starting negotiation timeout check');
+
+    // Periodic check with server
+    const checkInterval = setInterval(async () => {
+      try {
+        const updatedRoom = await gameRoomService.checkNegotiationTimeout(room.id);
+        if (updatedRoom && updatedRoom.status === 'playing') {
+          log.log('Negotiation timeout enforced by server');
+          setRoom(prev => prev ? { ...prev, ...updatedRoom } : null);
+          setStatus('playing');
+        }
+      } catch (err) {
+        log.error('Error checking negotiation timeout:', err);
+      }
+    }, 5000);
+
+    // Hard client-side timeout as backup
+    const timeoutId = setTimeout(async () => {
+      log.warn('Negotiation client timeout - forcing skip');
+      try {
+        await gameRoomService.skipBetting(room.id, userIdRef.current);
+        setStatus('playing');
+      } catch (err) {
+        log.error('Error forcing skip betting:', err);
+      }
+    }, NEGOTIATION_TIMEOUT_MS + 5000); // 5s buffer after server timeout
+
+    return () => {
+      clearInterval(checkInterval);
+      clearTimeout(timeoutId);
+    };
+  }, [status, room, setStatus]);
+
+  // Polling fallback for 'playing' state when disconnected
+  useEffect(() => {
+    if (status !== 'playing' || !room || connectionStatus === 'connected') {
+      pollFailureCountRef.current = 0; // Reset on state change
+      return;
+    }
+
+    // Circuit breaker check
+    if (pollFailureCountRef.current >= MAX_POLL_FAILURES) {
+      log.error('Circuit breaker triggered - too many poll failures');
+      setError('Conexion perdida. Por favor reconecta.');
+      return;
+    }
+
+    log.log('Starting playing-state polling fallback');
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const updatedRoom = await gameRoomService.getRoom(room.id);
+
+        if (!updatedRoom) {
+          pollFailureCountRef.current++;
+          log.warn(`Poll failure ${pollFailureCountRef.current}/${MAX_POLL_FAILURES}`);
+          return;
+        }
+
+        // Reset failure count on success
+        pollFailureCountRef.current = 0;
+
+        const currentTime = room.updated_at ? new Date(room.updated_at).getTime() : 0;
+        const newTime = updatedRoom.updated_at ? new Date(updatedRoom.updated_at).getTime() : 0;
+
+        if (newTime > currentTime) {
+          log.log('Playing-state polling detected change');
+          setRoom(prev => prev ? { ...prev, ...updatedRoom } : null);
+          handleRoomUpdate(updatedRoom);
+        }
+      } catch (err) {
+        pollFailureCountRef.current++;
+        log.error(`Playing-state polling error (${pollFailureCountRef.current}/${MAX_POLL_FAILURES}):`, err);
+      }
+    }, 3000);
+
+    return () => {
+      log.log('Stopping playing-state polling');
+      clearInterval(pollInterval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- room?.id and room?.updated_at are intentional to avoid re-running on every room property change
+  }, [status, room?.id, room?.updated_at, connectionStatus, handleRoomUpdate]);
 
   // Calculate pot total
   const potTotal = betAmount ? betAmount * 2 : 0;

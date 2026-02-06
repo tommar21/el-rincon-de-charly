@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useMemo } from 'react';
 import { getClient } from '@/lib/supabase/client';
 import { useAuthStore } from '../store/auth-store';
-import { validateProfile, isProfile } from '@/lib/validators/database-rows';
+import { validateProfile } from '@/lib/validators/database-rows';
 import type { Profile } from '../types';
 import { authLogger } from '@/lib/utils/logger';
 

@@ -51,7 +51,7 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, isMobile = 
 
   // Prevent hydration mismatch with Radix UI generated IDs
   useEffect(() => {
-    setMounted(true);
+    setMounted(true); // eslint-disable-line react-hooks/set-state-in-effect -- SSR hydration
   }, []);
 
   // Use controlled or internal state

@@ -39,9 +39,9 @@ export function GameScreen({
   ballCount,
   balance,
   gameState,
-  currentResult,
+  currentResult: _currentResult, // Reserved for future use
   history,
-  totalProfit,
+  totalProfit: _totalProfit, // Reserved for future use
   isAuthenticated,
   onRowsChange,
   onSpeedChange,
@@ -51,6 +51,8 @@ export function GameScreen({
   onBallLanded,
   onBack,
 }: GameScreenProps) {
+  void _currentResult;
+  void _totalProfit;
   const [highlightedSlot, setHighlightedSlot] = useState<number | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [sessionSummary, setSessionSummary] = useState<{
@@ -67,12 +69,12 @@ export function GameScreen({
       const totalBet = recentResults.reduce((sum, r) => sum + r.betAmount, 0);
       const totalWin = recentResults.reduce((sum, r) => sum + r.winAmount, 0);
 
-      setSessionSummary({
+      setSessionSummary({ // eslint-disable-line react-hooks/set-state-in-effect -- state update based on gameState transition
         totalBet,
         totalWin,
         ballsCount: recentResults.length,
       });
-      setShowSummary(true);
+      setShowSummary(true);  
 
       const timer = setTimeout(() => setShowSummary(false), 4000);
       return () => clearTimeout(timer);
@@ -96,6 +98,7 @@ export function GameScreen({
     setSpeed: setPhysicsSpeed,
     isReady,
     hasActiveBalls,
+    error: physicsError,
   } = usePlinkoPhysics({
     rows,
     speed,
@@ -202,9 +205,30 @@ export function GameScreen({
             />
 
             {/* Show spinner overlay while physics initializes */}
-            {!isReady && (
+            {!isReady && !physicsError && (
               <div className="absolute inset-0 flex items-center justify-center bg-(--color-surface)">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-(--color-primary)"></div>
+              </div>
+            )}
+
+            {/* Show error message if physics initialization failed */}
+            {physicsError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-(--color-surface) p-4">
+                <div className="text-center">
+                  <div className="text-(--color-error) text-lg font-semibold mb-2">
+                    Error de renderizado
+                  </div>
+                  <div className="text-(--color-text-muted) text-sm mb-4">
+                    No se pudo inicializar WebGL en tu navegador.
+                  </div>
+                  <Button
+                    onClick={() => window.location.reload()}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    Reintentar
+                  </Button>
+                </div>
               </div>
             )}
 

@@ -28,7 +28,7 @@ export function MobileSidebar({ onSearchClick }: MobileSidebarProps) {
 
   // Prevent hydration mismatch with Radix UI generated IDs
   useEffect(() => {
-    setMounted(true);
+    setMounted(true); // eslint-disable-line react-hooks/set-state-in-effect -- SSR hydration
   }, []);
 
   // Render placeholder button during SSR to prevent hydration mismatch

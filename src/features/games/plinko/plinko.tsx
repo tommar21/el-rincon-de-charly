@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/features/auth/hooks/use-auth';
 import { useWalletStore } from '@/features/wallet';
@@ -43,12 +43,12 @@ export function Plinko({ onBack = () => {} }: PlinkoProps) {
     if (isAuthLoading) return;
 
     if (!user) {
-      setIsReady(true);
+      setIsReady(true); // eslint-disable-line react-hooks/set-state-in-effect -- state sync after auth check
       return;
     }
 
     if (!isWalletLoading) {
-      setIsReady(true);
+      setIsReady(true);  
     }
   }, [isAuthLoading, isWalletLoading, user]);
 

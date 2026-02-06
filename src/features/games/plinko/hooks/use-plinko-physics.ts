@@ -19,6 +19,7 @@ interface UsePlinkoPhysicsReturn {
   setSpeed: (speed: BallSpeed) => void;
   isReady: boolean;
   hasActiveBalls: boolean;
+  error: Error | null;
 }
 
 export function usePlinkoPhysics(options: UsePlinkoPhysicsOptions): UsePlinkoPhysicsReturn {
@@ -28,6 +29,7 @@ export function usePlinkoPhysics(options: UsePlinkoPhysicsOptions): UsePlinkoPhy
   const engineRef = useRef<PlinkoEngine | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [hasActiveBalls, setHasActiveBalls] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   // Store callbacks in refs to avoid recreating engine on callback changes
   const callbacksRef = useRef<PlinkoEngineCallbacks>({});
@@ -68,29 +70,40 @@ export function usePlinkoPhysics(options: UsePlinkoPhysicsOptions): UsePlinkoPhy
       lastWidth = Math.round(width);
       lastHeight = Math.round(height);
 
-      // Create engine with proxy callbacks
-      const engine = new PlinkoEngine(rows, {
-        onPinHit: (ballId, pinIndex) => callbacksRef.current.onPinHit?.(ballId, pinIndex),
-        onBallLanded: (ballId, slotIndex, multiplier) =>
-          callbacksRef.current.onBallLanded?.(ballId, slotIndex, multiplier),
-        onAllBallsLanded: () => callbacksRef.current.onAllBallsLanded?.(),
-      });
+      try {
+        // Small delay to ensure canvas is properly in DOM and painted
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        if (!mounted) return;
 
-      // Set CSS dimensions
-      canvas.width = lastWidth;
-      canvas.height = lastHeight;
+        // Create engine with proxy callbacks
+        const engine = new PlinkoEngine(rows, {
+          onPinHit: (ballId, pinIndex) => callbacksRef.current.onPinHit?.(ballId, pinIndex),
+          onBallLanded: (ballId, slotIndex, multiplier) =>
+            callbacksRef.current.onBallLanded?.(ballId, slotIndex, multiplier),
+          onAllBallsLanded: () => callbacksRef.current.onAllBallsLanded?.(),
+        });
 
-      // Pixi.js init is async
-      await engine.init(canvas);
+        // Set CSS dimensions
+        canvas.width = lastWidth;
+        canvas.height = lastHeight;
 
-      // Check if still mounted after async init
-      if (!mounted) {
-        engine.destroy();
-        return;
+        // Pixi.js init is async
+        await engine.init(canvas);
+
+        // Check if still mounted after async init
+        if (!mounted) {
+          engine.destroy();
+          return;
+        }
+
+        engineRef.current = engine;
+        setError(null);
+        setIsReady(true);
+      } catch (err) {
+        console.error('Failed to initialize Plinko engine:', err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+        initialized = false; // Allow retry
       }
-
-      engineRef.current = engine;
-      setIsReady(true);
     };
 
     // Use ResizeObserver for both initialization AND continuous resize detection
@@ -147,7 +160,8 @@ export function usePlinkoPhysics(options: UsePlinkoPhysicsOptions): UsePlinkoPhy
       }
       setIsReady(false);
     };
-  }, []); // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only effect, rows changes handled separately
+  }, []);
 
   // Update rows when they change
   useEffect(() => {
@@ -189,5 +203,6 @@ export function usePlinkoPhysics(options: UsePlinkoPhysicsOptions): UsePlinkoPhy
     setSpeed,
     isReady,
     hasActiveBalls,
+    error,
   };
 }

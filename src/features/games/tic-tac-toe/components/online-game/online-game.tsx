@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCcw, ArrowLeft, Globe, Loader2, LogOut, Copy, Check, X, Wifi, WifiOff, Coins } from 'lucide-react';
+import { RotateCcw, Globe, Loader2, LogOut, Copy, Check, X, Wifi, WifiOff, Coins } from 'lucide-react';
 import { Board } from '../board';
 import { BetNegotiationOverlay } from '../bet-negotiation-overlay';
 import { Button } from '@/components/ui/button';
@@ -77,7 +77,7 @@ export function OnlineGame({
   onCancelLeave,
   onPlayAgain,
   onRetry,
-  onBack,
+  onBack: _onBack, // Reserved for future back button implementation
   rematchStatus,
   onRequestRematch,
   onAcceptRematch,
@@ -91,6 +91,8 @@ export function OnlineGame({
   onAcceptBetProposal,
   onSkipBetting,
 }: OnlineGameProps) {
+  void _onBack; // Reserved for future implementation
+
   const [copied, setCopied] = useState(false);
 
   const copyRoomLink = async () => {

@@ -81,8 +81,8 @@ async function withWalletLock<T>(
   const operationId = generateOperationId(operationType);
   const startTime = Date.now();
 
-  // Check if same type of operation is already in progress
-  const sameTypeInProgress = Array.from(pendingOperations).some(
+  // Check if same type of operation is already in progress (reserved for future debouncing)
+  void Array.from(pendingOperations).some(
     id => id.startsWith(operationType + ':')
   );
 
@@ -128,8 +128,9 @@ async function executeWalletTransaction(
   wallet: Wallet,
   params: TransactionParams,
   set: (state: Partial<WalletState>) => void,
-  get: () => WalletState
+  _get: () => WalletState
 ): Promise<{ success: boolean; newBalance?: number }> {
+  void _get; // Reserved for future retry logic
   const supabase = getClient();
 
   // Validate sufficient balance for bets

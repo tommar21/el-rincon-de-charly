@@ -53,8 +53,9 @@ export async function ServerActions<T extends ActionsMap>({
   actions,
   children,
 }: ServerActionsProps<T>) {
-  // Resolve searchParams if provided
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  // Resolve searchParams if provided (for future use in actions)
+  const _resolvedSearchParams = searchParams ? await searchParams : undefined;
+  void _resolvedSearchParams; // Prepared for future use
 
   // Execute all actions in parallel
   const entries = Object.entries(actions);

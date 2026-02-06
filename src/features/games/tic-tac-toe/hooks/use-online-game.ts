@@ -13,7 +13,8 @@ import { dbBoardToBoardState, boardStateToDbBoard } from '../../common/utils';
 import { createLogger } from '@/lib/utils/logger';
 import type { BoardState, WinResult } from '../types';
 
-const log = createLogger({ prefix: 'TicTacToeOnline' });
+const _log = createLogger({ prefix: 'TicTacToeOnline' });
+void _log; // Reserved for future debugging
 
 export type { OnlineGameStatus, RematchStatus };
 
@@ -61,8 +62,10 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
   const [isDraw, setIsDraw] = useState(false);
 
   const onGameEndRef = useRef(onGameEnd);
+   
   onGameEndRef.current = onGameEnd;
   const finishTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const setStatusRef = useRef<((status: OnlineGameStatus) => void) | null>(null);
 
   // Handle room updates - tic-tac-toe specific logic
   const handleRoomUpdate = useCallback((updatedRoom: GameRoom) => {
@@ -85,7 +88,7 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
 
     // Delay status change to allow animations
     finishTimeoutRef.current = setTimeout(() => {
-      core.setStatus('finished');
+      setStatusRef.current?.('finished');
       if (updatedRoom.is_draw) {
         onGameEndRef.current?.(null, true, symbol);
       } else if (updatedRoom.winner_id) {
@@ -101,6 +104,10 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     onRoomUpdate: handleRoomUpdate,
     onGameFinished: handleGameFinished,
   });
+
+  // Update ref to allow callbacks to access core.setStatus
+   
+  setStatusRef.current = core.setStatus;
 
   // Derived state
   const mySymbol = core.room
@@ -125,6 +132,7 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
       core.setRoom(freshRoom);
       setBoard(dbBoardToBoardState(freshRoom.board as string[]));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- core.setRoom is stable, only room.id matters
   }, [core.room]);
 
   // Make a move - tic-tac-toe specific
@@ -203,6 +211,7 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     }
 
     return true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- core methods are stable, only room/board matter
   }, [core.room, board, mySymbol, userId, syncWithServer]);
 
   // Extended leave game to reset tic-tac-toe state
@@ -211,6 +220,7 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     setBoard(createInitialBoard());
     setWinner(null);
     setIsDraw(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- core.leaveGame is a stable reference
   }, [core.leaveGame]);
 
   // Cleanup timeout on unmount
@@ -222,47 +232,8 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
     };
   }, []);
 
-  // Polling fallback during playing state when realtime not connected
-  useEffect(() => {
-    if (core.status !== 'playing' || !core.room || core.connectionStatus === 'connected') return;
-
-    log.log('Starting playing-state polling fallback');
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const updatedRoom = await gameRoomService.getRoom(core.room!.id);
-
-        if (updatedRoom) {
-          const currentTime = core.room!.updated_at ? new Date(core.room!.updated_at).getTime() : 0;
-          const newTime = updatedRoom.updated_at ? new Date(updatedRoom.updated_at).getTime() : 0;
-
-          if (newTime > currentTime) {
-            log.log('Polling detected change during playing state');
-            core.setRoom(prev => prev ? { ...prev, ...updatedRoom } : null);
-            setBoard(dbBoardToBoardState(updatedRoom.board as string[]));
-
-            if (updatedRoom.status === 'finished') {
-              const newBoard = dbBoardToBoardState(updatedRoom.board as string[]);
-              if (updatedRoom.is_draw) {
-                setIsDraw(true);
-              } else if (updatedRoom.winner_id) {
-                const winResult = checkWinner(newBoard);
-                if (winResult) setWinner(winResult);
-              }
-              core.setStatus('finished');
-            }
-          }
-        }
-      } catch (err) {
-        log.error('Playing-state polling error:', err);
-      }
-    }, 5000);
-
-    return () => {
-      log.log('Stopping playing-state polling');
-      clearInterval(pollInterval);
-    };
-  }, [core.status, core.room?.id, core.room?.updated_at, core.connectionStatus]);
+  // Note: Playing-state polling is now handled by useOnlineGameCore
+  // which calls handleRoomUpdate and handleGameFinished when changes are detected
 
   // Update room data on status transition to playing
   const prevStatusRef = useRef<OnlineGameStatus>('idle');
@@ -278,6 +249,7 @@ export function useOnlineGame({ userId, onGameEnd }: UseOnlineGameOptions): UseO
         }
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- core.setRoom is stable, only status/room.id matter
   }, [core.status, core.room?.id]);
 
   return {

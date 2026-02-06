@@ -47,6 +47,7 @@ export function useModals<T extends string>(modalNames: readonly T[]): UseModals
 
   // Use ref to always have access to latest state without recreating isOpen callback
   const stateRef = useRef(state);
+  // eslint-disable-next-line react-hooks/refs -- intentional pattern to keep ref in sync without re-creating callbacks
   stateRef.current = state;
 
   // isOpen is stable - reads from ref, doesn't depend on state

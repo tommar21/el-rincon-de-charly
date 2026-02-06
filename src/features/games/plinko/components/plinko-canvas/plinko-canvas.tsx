@@ -8,7 +8,6 @@ import {
   MULTIPLIER_TEXT_COLORS,
   MULTIPLIER_BG_COLORS,
   MULTIPLIER_TEXT_HEX,
-  getPhysicsConfig,
 } from '../../engine';
 
 interface PlinkoCanvasProps {

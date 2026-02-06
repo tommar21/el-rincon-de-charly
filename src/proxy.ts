@@ -38,7 +38,7 @@ export async function proxy(request: NextRequest) {
 
   try {
     // Refresh the session - this validates and refreshes the token if expired
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const { error } = await supabase.auth.getUser();
 
     if (error) {
       // Log auth errors but don't block the request

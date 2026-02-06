@@ -47,13 +47,13 @@ export function ThemeProvider({
       // Check if it's an old theme name that needs migration
       if (THEME_MIGRATION[stored]) {
         const migratedTheme = THEME_MIGRATION[stored];
-        setThemeState(migratedTheme);
+        setThemeState(migratedTheme); // eslint-disable-line react-hooks/set-state-in-effect -- SSR hydration
         localStorage.setItem(THEME_KEY, migratedTheme);
       } else if (VALID_THEMES.includes(stored as Theme)) {
-        setThemeState(stored as Theme);
+        setThemeState(stored as Theme);  
       }
     }
-    setMounted(true);
+    setMounted(true);  
   }, []);
 
   // Apply theme to document

@@ -24,7 +24,6 @@ import { TRANSITIONS } from '@/lib/theme/motion-defaults';
 interface GameCardProps {
   game: GameConfig;
   index?: number;
-  totalGames?: number;
 }
 
 // Iconos para cada juego
@@ -36,7 +35,7 @@ const gameIcons: Record<string, typeof Hash> = {
   plinko: Pyramid,
 };
 
-export const GameCard = memo(function GameCard({ game, index = 0, totalGames = 1 }: GameCardProps) {
+export const GameCard = memo(function GameCard({ game, index = 0 }: GameCardProps) {
   const Icon = gameIcons[game.slug] || Gamepad2;
   const { shouldReduceMotion } = useMotionConfig();
   const [isHovered, setIsHovered] = useState(false);

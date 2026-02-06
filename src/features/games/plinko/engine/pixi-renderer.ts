@@ -11,26 +11,73 @@ export class PixiRenderer {
   private dynamicLayer: Container | null = null;
   private pinsGraphics: Graphics | null = null;
   private isInitialized = false;
+  private initError: Error | null = null;
 
   async init(canvas: HTMLCanvasElement, width: number, height: number): Promise<void> {
-    this.app = new Application();
+    // Validate canvas and dimensions
+    if (!canvas || width <= 0 || height <= 0) {
+      throw new Error('Invalid canvas or dimensions');
+    }
 
-    await this.app.init({
-      canvas,
-      width,
-      height,
-      autoDensity: true,
-      resolution: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
-      backgroundAlpha: 0,
-      antialias: true,
-    });
+    // Ensure canvas has proper dimensions set
+    canvas.width = width;
+    canvas.height = height;
 
-    this.staticLayer = new Container();
-    this.dynamicLayer = new Container();
-    this.app.stage.addChild(this.staticLayer);
-    this.app.stage.addChild(this.dynamicLayer);
+    try {
+      this.app = new Application();
 
-    this.isInitialized = true;
+      await this.app.init({
+        canvas,
+        width,
+        height,
+        autoDensity: true,
+        resolution: typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1,
+        backgroundAlpha: 0,
+        antialias: true,
+        preference: 'webgl',
+      });
+
+      this.staticLayer = new Container();
+      this.dynamicLayer = new Container();
+      this.app.stage.addChild(this.staticLayer);
+      this.app.stage.addChild(this.dynamicLayer);
+
+      this.isInitialized = true;
+    } catch (error) {
+      this.initError = error instanceof Error ? error : new Error(String(error));
+      console.error('Failed to initialize Pixi.js renderer:', error);
+
+      // Try fallback with simpler settings
+      try {
+        this.app = new Application();
+
+        await this.app.init({
+          canvas,
+          width,
+          height,
+          autoDensity: false,
+          resolution: 1,
+          backgroundAlpha: 0,
+          antialias: false,
+          preference: 'webgl',
+        });
+
+        this.staticLayer = new Container();
+        this.dynamicLayer = new Container();
+        this.app.stage.addChild(this.staticLayer);
+        this.app.stage.addChild(this.dynamicLayer);
+
+        this.isInitialized = true;
+        this.initError = null;
+      } catch (fallbackError) {
+        console.error('Fallback initialization also failed:', fallbackError);
+        throw this.initError;
+      }
+    }
+  }
+
+  getInitError(): Error | null {
+    return this.initError;
   }
 
   renderPins(bodies: Matter.Body[], pinSize: number): void {

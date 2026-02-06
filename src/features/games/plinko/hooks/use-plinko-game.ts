@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useWalletStore } from '@/features/wallet';
 import type { RowCount, PlinkoState, DropResult, BallDirection, BallSpeed } from '../types';
-import { getMultiplier, BALL_DROP_DELAY } from '../engine';
+import { BALL_DROP_DELAY } from '../engine';
 import { gameLogger } from '@/lib/utils/logger';
 
 // Ball count range

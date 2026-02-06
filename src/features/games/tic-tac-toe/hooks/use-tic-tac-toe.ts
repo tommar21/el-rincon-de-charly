@@ -129,7 +129,7 @@ export function useTicTacToe({
     }
 
     aiMoveInProgressRef.current = true;
-    setIsAIThinking(true);
+    setIsAIThinking(true); // eslint-disable-line react-hooks/set-state-in-effect -- AI state coordination
 
     // Add a small delay to make AI feel more natural
     const delay = aiDifficulty === 'easy' ? 300 : aiDifficulty === 'medium' ? 500 : 700;

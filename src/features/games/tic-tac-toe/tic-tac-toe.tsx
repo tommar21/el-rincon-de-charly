@@ -182,6 +182,7 @@ export function TicTacToe({ onBack = () => {} }: TicTacToeProps) {
       // Clear the URL param to avoid re-joining on refresh
       router.replace('/games/tic-tac-toe', { scroll: false });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onlineGame.joinRoom and router are stable references
   }, [roomParam, isAuthenticated, user?.id, isLoading]);
 
   // Handlers

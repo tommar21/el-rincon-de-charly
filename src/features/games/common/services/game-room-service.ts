@@ -59,6 +59,7 @@ interface ChannelSubscription {
   statusCallbacks: Set<(status: ConnectionStatus) => void>;
   reconnectAttempts: number;
   reconnectTimer?: ReturnType<typeof setTimeout>;
+  cancelled: boolean; // Flag to prevent timer execution after cleanup
 }
 
 class GameRoomService {
@@ -66,6 +67,8 @@ class GameRoomService {
   private sharedChannels: Map<string, ChannelSubscription> = new Map();
   // Map de suscripciones individuales para cleanup
   private subscriptionToRoom: Map<string, string> = new Map();
+  // Set to track channels being created (thread-safety)
+  private creatingChannels: Set<string> = new Set();
 
   private get supabase() {
     return getClient();
@@ -339,19 +342,68 @@ class GameRoomService {
     let subscription = this.sharedChannels.get(roomId);
 
     if (!subscription) {
+      // Check if another call is currently creating this channel
+      if (this.creatingChannels.has(roomId)) {
+        realtimeLog.log('Channel creation in progress for room:', roomId, '- waiting...');
+        // Wait briefly and reuse the channel being created
+        const waitForChannel = () => {
+          const existingSub = this.sharedChannels.get(roomId);
+          if (existingSub && !this.creatingChannels.has(roomId)) {
+            existingSub.callbacks.add(callback);
+            if (onStatusChange) {
+              existingSub.statusCallbacks.add(onStatusChange);
+            }
+          } else if (this.creatingChannels.has(roomId)) {
+            // Still creating, wait a bit more
+            setTimeout(waitForChannel, 50);
+          }
+        };
+        setTimeout(waitForChannel, 50);
+
+        // Return cleanup that handles the delayed registration
+        return () => {
+          const sub = this.sharedChannels.get(roomId);
+          if (sub) {
+            sub.callbacks.delete(callback);
+            if (onStatusChange) {
+              sub.statusCallbacks.delete(onStatusChange);
+            }
+            if (sub.callbacks.size === 0) {
+              sub.cancelled = true;
+              if (sub.reconnectTimer) {
+                clearTimeout(sub.reconnectTimer);
+              }
+              if (sub.channel) {
+                this.supabase.removeChannel(sub.channel);
+              }
+              this.sharedChannels.delete(roomId);
+            }
+          }
+          this.subscriptionToRoom.delete(subscriptionId);
+        };
+      }
+
+      // Mark as creating to prevent duplicate channel creation
+      this.creatingChannels.add(roomId);
+
       // Crear nuevo canal compartido para la sala
       subscription = {
         channel: null as unknown as RealtimeChannel,
         callbacks: new Set(),
         statusCallbacks: new Set(),
         reconnectAttempts: 0,
+        cancelled: false,
       };
       this.sharedChannels.set(roomId, subscription);
 
       // Función para crear/recrear el canal
       const createChannel = () => {
         const sub = this.sharedChannels.get(roomId);
-        if (!sub) return;
+        // Check if subscription was cancelled (cleanup called while timer pending)
+        if (!sub || sub.cancelled) {
+          realtimeLog.log('Channel creation cancelled for room:', roomId);
+          return;
+        }
 
         // Notificar estado de conexión
         const notifyStatus = (status: ConnectionStatus) => {
@@ -381,8 +433,10 @@ class GameRoomService {
             if (status === 'SUBSCRIBED') {
               realtimeLog.log('Connected to room:', roomId);
               sub.reconnectAttempts = 0;
+              this.creatingChannels.delete(roomId); // Channel created successfully
               notifyStatus('connected');
             } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              this.creatingChannels.delete(roomId); // Remove from creating set on error
               realtimeLog.error('Subscription error:', status, err);
               notifyStatus('disconnected');
 
@@ -431,6 +485,9 @@ class GameRoomService {
 
         // Si no quedan callbacks, limpiar el canal compartido
         if (sub.callbacks.size === 0) {
+          // Mark as cancelled BEFORE clearing timer to prevent race condition
+          sub.cancelled = true;
+          this.creatingChannels.delete(roomId); // Remove from creating set
           if (sub.reconnectTimer) {
             clearTimeout(sub.reconnectTimer);
           }

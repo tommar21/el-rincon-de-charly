@@ -68,7 +68,7 @@ export function GamesHubClient({ games }: GamesHubClientProps) {
       {filteredGames.length > 0 ? (
         <div className="flex flex-wrap justify-center py-4">
           {filteredGames.map((game, index) => (
-            <GameCard key={game.slug} game={game} index={index} totalGames={filteredGames.length} />
+            <GameCard key={game.slug} game={game} index={index} />
           ))}
         </div>
       ) : (

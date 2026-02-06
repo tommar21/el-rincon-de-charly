@@ -7,9 +7,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils/cn';
 import { formatBalance } from '@/features/wallet/store/wallet-store';
 import type { NegotiationState } from '../../common/hooks';
-
-// Bet presets for counter-proposals
-const BET_PRESETS = [10, 25, 50, 100, 250, 500];
+import { BET_PRESETS } from '../../common/constants';
 
 interface BetNegotiationOverlayProps {
   isOpen: boolean;
@@ -43,7 +41,7 @@ export function BetNegotiationOverlay({
   // Calculate time remaining
   useEffect(() => {
     if (!deadline || negotiationState !== 'pending') {
-      setTimeLeft(30);
+      setTimeLeft(30); // eslint-disable-line react-hooks/set-state-in-effect -- reset timer state
       return;
     }
 
@@ -63,8 +61,8 @@ export function BetNegotiationOverlay({
 
   // Reset selected amount when proposals change
   useEffect(() => {
-    setSelectedAmount(null);
-    setCustomInput('');
+    setSelectedAmount(null); // eslint-disable-line react-hooks/set-state-in-effect -- reset on prop change
+    setCustomInput('');  
   }, [myProposal, opponentProposal]);
 
   const handleCounterPropose = useCallback(() => {
@@ -77,11 +75,6 @@ export function BetNegotiationOverlay({
   const canAffordOpponent = useMemo(() => {
     return opponentProposal !== null && opponentProposal <= balance;
   }, [opponentProposal, balance]);
-
-  // Available presets based on balance
-  const availablePresets = useMemo(() => {
-    return BET_PRESETS.filter(amount => amount <= balance);
-  }, [balance]);
 
   if (!isOpen) return null;
 
@@ -236,7 +229,7 @@ export function BetNegotiationOverlay({
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-warning) focus-visible:ring-offset-2',
                           'placeholder:text-(--color-text-muted)',
                           '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
-                          customInput && selectedAmount && !BET_PRESETS.includes(selectedAmount)
+                          customInput && selectedAmount && !(BET_PRESETS as readonly number[]).includes(selectedAmount)
                             ? 'ring-2 ring-(--color-warning) border-transparent'
                             : ''
                         )}

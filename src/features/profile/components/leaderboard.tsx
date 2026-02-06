@@ -1,7 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Trophy, Medal, Crown, User, Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import { Trophy, Medal, Crown, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import type { LeaderboardEntry } from '../types';
 
@@ -127,10 +128,13 @@ export function Leaderboard({
               'border border-(--color-border)/30'
             )}>
               {entry.avatarUrl ? (
-                <img
+                <Image
                   src={entry.avatarUrl}
                   alt={entry.username}
+                  width={44}
+                  height={44}
                   className="w-full h-full object-cover"
+                  unoptimized
                 />
               ) : (
                 <span className="text-(--color-primary) font-bold">

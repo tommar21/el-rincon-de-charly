@@ -32,7 +32,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Prevent hydration mismatch
   useEffect(() => {
-    setMounted(true);
+    setMounted(true); // eslint-disable-line react-hooks/set-state-in-effect -- SSR hydration
   }, []);
 
   const handleSearchClick = () => {

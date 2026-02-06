@@ -8,9 +8,7 @@ import { cn } from '@/lib/utils/cn';
 import { useWalletStore, formatBalance } from '@/features/wallet/store/wallet-store';
 import type { AIDifficulty, GameMode } from '../../../registry/types';
 import type { BetConfig } from '../../../common/hooks';
-
-// Bet presets
-const BET_PRESETS = [10, 25, 50, 100, 250, 500];
+import { BET_PRESETS } from '../../../common/constants';
 
 // Difficulty config data
 const DIFFICULTIES: {
@@ -134,7 +132,7 @@ export function ModeSelection({
 
   // Bet toggle state
   const [wantsToBet, setWantsToBet] = useState(false);
-  const [betAmount, setBetAmount] = useState(BET_PRESETS[0]);
+  const [betAmount, setBetAmount] = useState<number>(BET_PRESETS[0]);
   const [customBetInput, setCustomBetInput] = useState('');
 
   const handleToggleBet = useCallback(() => {
@@ -330,7 +328,7 @@ export function ModeSelection({
                                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--color-warning) focus-visible:ring-offset-2',
                                 'placeholder:text-(--color-text-muted)',
                                 '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
-                                customBetInput && !BET_PRESETS.includes(betAmount)
+                                customBetInput && !(BET_PRESETS as readonly number[]).includes(betAmount)
                                   ? 'ring-2 ring-(--color-warning) border-transparent'
                                   : ''
                               )}
