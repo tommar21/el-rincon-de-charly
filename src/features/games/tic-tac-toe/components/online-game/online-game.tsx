@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Globe, Loader2, LogOut, Copy, Check, X, Wifi, WifiOff, Coins } from 'lucide-react';
 import { Board } from '../board';
@@ -59,7 +59,7 @@ interface OnlineGameProps {
   onSkipBetting?: () => void;
 }
 
-export function OnlineGame({
+export const OnlineGame = memo(function OnlineGame({
   status,
   board,
   mySymbol,
@@ -497,6 +497,6 @@ export function OnlineGame({
       )}
     </div>
   );
-}
+})
 
 export default OnlineGame;

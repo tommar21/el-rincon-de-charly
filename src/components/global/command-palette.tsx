@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Hash,
@@ -58,6 +58,12 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, isMobile = 
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setIsOpen = onOpenChange || setInternalOpen;
 
+  // Keep a ref to avoid stale closures in the keyboard handler
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
+  const setIsOpenRef = useRef(setIsOpen);
+  setIsOpenRef.current = setIsOpen;
+
   const runCommand = useCallback((command: () => void) => {
     setIsOpen(false);
     command();
@@ -68,13 +74,13 @@ export function CommandPalette({ open: controlledOpen, onOpenChange, isMobile = 
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setIsOpen(!isOpen);
+        setIsOpenRef.current(!isOpenRef.current);
       }
     };
 
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
-  }, [isOpen, setIsOpen]);
+  }, []);
 
   // Don't render dialog until mounted to prevent hydration mismatch
   if (!mounted) {

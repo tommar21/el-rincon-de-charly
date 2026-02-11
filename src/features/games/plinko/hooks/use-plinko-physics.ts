@@ -100,7 +100,6 @@ export function usePlinkoPhysics(options: UsePlinkoPhysicsOptions): UsePlinkoPhy
         setError(null);
         setIsReady(true);
       } catch (err) {
-        console.error('Failed to initialize Plinko engine:', err);
         setError(err instanceof Error ? err : new Error(String(err)));
         initialized = false; // Allow retry
       }

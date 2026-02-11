@@ -45,7 +45,6 @@ export class PixiRenderer {
       this.isInitialized = true;
     } catch (error) {
       this.initError = error instanceof Error ? error : new Error(String(error));
-      console.error('Failed to initialize Pixi.js renderer:', error);
 
       // Try fallback with simpler settings
       try {
@@ -69,8 +68,7 @@ export class PixiRenderer {
 
         this.isInitialized = true;
         this.initError = null;
-      } catch (fallbackError) {
-        console.error('Fallback initialization also failed:', fallbackError);
+      } catch {
         throw this.initError;
       }
     }
