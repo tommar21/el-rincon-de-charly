@@ -170,7 +170,7 @@ function CommandItem({
         "data-[selected=true]:bg-primary/10 data-[selected=true]:text-(--color-primary)",
         "aria-selected:bg-primary/10 aria-selected:text-(--color-primary)",
         "**:[svg:not([class*='text-'])]:text-(--color-text-muted)",
-        "data-disabled:pointer-events-none data-disabled:opacity-50",
+        "data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
         "**:[svg]:pointer-events-none **:[svg]:shrink-0 **:[svg:not([class*='size-'])]:size-4",
         "transition-colors duration-150",
         className

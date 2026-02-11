@@ -8,6 +8,7 @@ import {
   Zap,
   Moon,
   Flame,
+  Triangle,
 } from 'lucide-react';
 import {
   CommandDialog,
@@ -23,11 +24,13 @@ import { useTheme, type Theme } from '@/components/client/theme-provider';
 // Game icons mapping
 const gameIcons: Record<string, typeof Hash> = {
   'tic-tac-toe': Hash,
+  'plinko': Triangle,
 };
 
 // Available games (only show games that are actually playable)
 const games = [
   { slug: 'tic-tac-toe', name: 'Tic Tac Toe' },
+  { slug: 'plinko', name: 'Plinko' },
 ];
 
 // Theme options
