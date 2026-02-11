@@ -310,7 +310,7 @@ export const useStatsStore = create<StatsState>()(
       }),
       // Handle localStorage errors (quota exceeded, private browsing, etc.)
       onRehydrateStorage: () => {
-        return (state, error) => {
+        return (_state, error) => {
           if (error) {
             statsLogger.warn('Error rehydrating stats from localStorage:', error);
             // State will use initialStats as fallback

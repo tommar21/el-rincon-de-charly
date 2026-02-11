@@ -1,10 +1,19 @@
-import Matter from 'matter-js';
 import type { RowCount, BallDirection, PhysicsConfig, BallSpeed } from '../types';
 import { getPhysicsConfig, COLLISION_CATEGORIES, BALL_MASS, SPEED_CONFIG } from './physics-config';
 import { getMultiplier, calculateFinalSlot } from './multipliers';
 import { PixiRenderer } from './pixi-renderer';
 
-const { Engine, Runner, World, Bodies, Composite, Events, Body, Vector } = Matter;
+// Dynamic import for Matter.js to reduce initial bundle size
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let Matter: any;
+let Engine: typeof import('matter-js').Engine;
+let Runner: typeof import('matter-js').Runner;
+let World: typeof import('matter-js').World;
+let Bodies: typeof import('matter-js').Bodies;
+let Composite: typeof import('matter-js').Composite;
+let Events: typeof import('matter-js').Events;
+let Body: typeof import('matter-js').Body;
+let Vector: typeof import('matter-js').Vector;
 
 export interface PlinkoEngineCallbacks {
   onPinHit?: (ballId: string, pinIndex: number) => void;
@@ -30,7 +39,6 @@ export class PlinkoEngine {
   private engine: Matter.Engine;
   private runner: Matter.Runner | null = null;
   private world: Matter.World;
-  private canvas: HTMLCanvasElement | null = null;
   private renderer: PixiRenderer | null = null;
   private renderCallback: (() => void) | null = null;
 
@@ -52,18 +60,35 @@ export class PlinkoEngine {
     this.callbacks = callbacks;
     this.physicsConfig = getPhysicsConfig(rows, typeof window !== 'undefined' ? window.innerWidth : 800);
 
-    this.engine = Engine.create({
-      gravity: { x: 0, y: 1, scale: 0.001 },
-      enableSleeping: false,
-    });
-    this.world = this.engine.world;
+    // Engine initialization is deferred to init() method
+    this.engine = null as any; // Will be created in init()
+    this.world = null as any; // Will be created in init()
   }
 
   /**
    * Initialize the engine with a canvas element
    */
   async init(canvas: HTMLCanvasElement): Promise<void> {
-    this.canvas = canvas;
+    // Dynamically import Matter.js on first use
+    if (!Matter) {
+      const matterModule = await import('matter-js');
+      Matter = matterModule.default;
+      Engine = Matter.Engine;
+      Runner = Matter.Runner;
+      World = Matter.World;
+      Bodies = Matter.Bodies;
+      Composite = Matter.Composite;
+      Events = Matter.Events;
+      Body = Matter.Body;
+      Vector = Matter.Vector;
+
+      // Now create the engine and world
+      this.engine = Engine.create({
+        gravity: { x: 0, y: 1, scale: 0.001 },
+        enableSleeping: false,
+      });
+      this.world = this.engine.world;
+    }
 
     // Use canvas dimensions directly (set by the hook from container size)
     this.worldWidth = canvas.width;
@@ -82,6 +107,11 @@ export class PlinkoEngine {
     // Render initial pins (static elements)
     const bodies = Composite.allBodies(this.world);
     this.renderer.renderPins(bodies, this.physicsConfig.pinSize);
+
+    // Remove existing render callback before adding new one
+    if (this.renderCallback && this.renderer) {
+      this.renderer.removeTickerCallback(this.renderCallback);
+    }
 
     // Setup render loop using Pixi ticker
     this.renderCallback = () => {
@@ -491,7 +521,6 @@ export class PlinkoEngine {
 
     this.balls.clear();
     this.ballsToSteer.clear();
-    this.canvas = null;
     this.renderCallback = null;
   }
 }

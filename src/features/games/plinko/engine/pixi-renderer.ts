@@ -1,19 +1,31 @@
-import { Application, Container, Graphics } from 'pixi.js';
 import type Matter from 'matter-js';
+
+// Dynamic import for Pixi.js to reduce initial bundle size
+let Application: typeof import('pixi.js').Application;
+let Container: typeof import('pixi.js').Container;
+let Graphics: typeof import('pixi.js').Graphics;
 
 interface BallInfo {
   body: Matter.Body;
 }
 
 export class PixiRenderer {
-  private app: Application | null = null;
-  private staticLayer: Container | null = null;
-  private dynamicLayer: Container | null = null;
-  private pinsGraphics: Graphics | null = null;
+  private app: InstanceType<typeof import('pixi.js').Application> | null = null;
+  private staticLayer: InstanceType<typeof import('pixi.js').Container> | null = null;
+  private dynamicLayer: InstanceType<typeof import('pixi.js').Container> | null = null;
+  private pinsGraphics: InstanceType<typeof import('pixi.js').Graphics> | null = null;
   private isInitialized = false;
   private initError: Error | null = null;
 
   async init(canvas: HTMLCanvasElement, width: number, height: number): Promise<void> {
+    // Dynamically import Pixi.js on first use
+    if (!Application) {
+      const pixiModule = await import('pixi.js');
+      Application = pixiModule.Application;
+      Container = pixiModule.Container;
+      Graphics = pixiModule.Graphics;
+    }
+
     // Validate canvas and dimensions
     if (!canvas || width <= 0 || height <= 0) {
       throw new Error('Invalid canvas or dimensions');
